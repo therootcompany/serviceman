@@ -1,0 +1,87 @@
+# Pre-req
+# sudo mkdir -p {{ .Local }}/opt/{{ .Name }}/ {{ .Local }}/var/log/{{ .Name }}
+{{ if not .Local -}}
+{{- if and .User ( ne "root" .User ) -}}
+# sudo adduser {{ .User }} --home /opt/{{ .Name }}
+# sudo chown -R {{ .User }}:{{ .Group }} /opt/{{ .Name }}/ /var/log/{{ .Name }}
+{{- end }}
+{{ end -}}
+# Post-install
+# sudo systemctl {{ if .Local -}} --user {{ end -}} daemon-reload
+# sudo systemctl {{ if .Local -}} --user {{ end -}} restart {{ .Name }}.service
+# sudo journalctl {{ if .Local -}} --user {{ end -}} -xefu {{ .Name }}
+
+[Unit]
+Description={{ .Title }} - {{ .Desc }}
+Documentation={{ .URL }}
+{{ if not .Local -}}
+After=network-online.target
+Wants=network-online.target systemd-networkd-wait-online.service
+{{- end }}
+
+[Service]
+# Restart on crash (bad signal), but not on 'clean' failure (error exit code)
+# Allow up to 3 restarts within 10 seconds
+# (it's unlikely that a user or properly-running script will do this)
+Restart=on-abnormal
+StartLimitInterval=10
+StartLimitBurst=3
+
+{{ if .User -}}
+# User and group the process will run as
+User={{ .User }}
+Group={{ .Group }}
+
+{{ end -}}
+WorkingDirectory={{ .Local }}/opt/{{ .Name }}
+ExecStart={{if .Interpreter }}{{ .Interpreter }} {{ end }}{{ .Local }}/opt/{{ .Name }}/{{ .Name }} {{ .Args }}
+ExecReload=/bin/kill -USR1 $MAINPID
+
+{{if .Production -}}
+# Limit the number of file descriptors and processes; see `man systemd.exec` for more limit settings.
+# These are reasonable defaults for a production system.
+# Note: systemd "user units" do not support this
+LimitNOFILE=1048576
+LimitNPROC=64
+
+{{ end -}}
+{{if .MultiuserProtection -}}
+# Use private /tmp and /var/tmp, which are discarded after the service stops.
+PrivateTmp=true
+# Use a minimal /dev
+PrivateDevices=true
+# Hide /home, /root, and /run/user. Nobody will steal your SSH-keys.
+ProtectHome=true
+# Make /usr, /boot, /etc and possibly some more folders read-only.
+ProtectSystem=full
+# ... except /opt/{{ .Name }} because we want a place for the database
+# and /var/log/{{ .Name }} because we want a place where logs can go.
+# This merely retains r/w access rights, it does not add any new.
+# Must still be writable on the host!
+ReadWriteDirectories=/opt/{{ .Name }} /var/log/{{ .Name }}
+
+# Note: in v231 and above ReadWritePaths has been renamed to ReadWriteDirectories
+; ReadWritePaths=/opt/{{ .Name }} /var/log/{{ .Name }}
+
+{{ end -}}
+{{if .PrivilegedPorts -}}
+# The following additional security directives only work with systemd v229 or later.
+# They further retrict privileges that can be gained by the service.
+# Note that you may have to add capabilities required by any plugins in use.
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+
+# Caveat: Some features may need additional capabilities.
+# For example an "upload" may need CAP_LEASE
+; CapabilityBoundingSet=CAP_NET_BIND_SERVICE CAP_LEASE
+; AmbientCapabilities=CAP_NET_BIND_SERVICE CAP_LEASE
+; NoNewPrivileges=true
+
+{{ end -}}
+[Install]
+{{ if not .Local -}}
+WantedBy=multi-user.target
+{{- else -}}
+WantedBy=default.target
+{{- end }}
