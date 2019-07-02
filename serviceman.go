@@ -5,7 +5,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -114,9 +113,9 @@ func main() {
 			return
 		}
 		conf.Local = filepath.Join(home, ".local")
-		conf.LogDir = filepath.Join(home, ".local", "share", conf.Name, "var", "log")
+		conf.Logdir = filepath.Join(home, ".local", "share", conf.Name, "var", "log")
 	} else {
-		conf.LogDir = "/var/log/" + conf.Name
+		conf.Logdir = "/var/log/" + conf.Name
 	}
 
 	// Check to see if Exec exists
@@ -149,12 +148,22 @@ func main() {
 			}
 			fmt.Fprintf(os.Stderr, "Using '%s' anyway.\n", conf.Exec)
 		}
+	} else {
+		execpath, err := filepath.Abs(conf.Exec)
+		if nil != err {
+			fmt.Fprintf(os.Stderr, "Unrecoverable Error: %s", err)
+			os.Exit(4)
+		} else {
+			conf.Exec = execpath
+		}
 	}
 
 	fmt.Printf("\n%#v\n\n", conf)
 
 	err = installer.Install(conf)
 	if nil != err {
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		fmt.Fprintf(os.Stderr, "Use 'sudo' to install as a privileged system service.\n")
+		fmt.Fprintf(os.Stderr, "Use '--user' to install as an user service.\n")
 	}
 }

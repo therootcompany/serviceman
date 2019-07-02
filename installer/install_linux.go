@@ -31,10 +31,10 @@ func install(c *Config) error {
 		// * ~/.config/systemd/user/watchdog.service
 		// https://wiki.archlinux.org/index.php/Systemd/User
 		serviceDir = filepath.Join(c.home, ".local/share/systemd/user")
-	}
-	err := os.MkdirAll(filepath.Dir(serviceDir), 0750)
-	if nil != err {
-		return err
+		err := os.MkdirAll(filepath.Dir(serviceDir), 0755)
+		if nil != err {
+			return err
+		}
 	}
 
 	// Create service file from template

@@ -65,7 +65,7 @@ type Config struct {
 	Group               string            `json:"group"`
 	home                string            `json:"-"`
 	Local               string            `json:"-"`
-	LogDir              string            `json:"-"`
+	Logdir              string            `json:"-"`
 	System              bool              `json:"system"`
 	Restart             bool              `json:"restart"`
 	Production          bool              `json:"production"`
@@ -96,7 +96,7 @@ func Install(c *Config) error {
 		return err
 	}
 
-	err = os.MkdirAll(c.LogDir, 0750)
+	err = os.MkdirAll(c.Logdir, 0755)
 	if nil != err {
 		return err
 	}

@@ -25,7 +25,7 @@ func install(c *Config) error {
 	}
 
 	// Check paths first
-	err := os.MkdirAll(filepath.Dir(plistDir), 0750)
+	err := os.MkdirAll(filepath.Dir(plistDir), 0755)
 	if nil != err {
 		return err
 	}
@@ -52,13 +52,19 @@ func install(c *Config) error {
 	plistName := c.ReverseDNS + ".plist"
 	plistPath := filepath.Join(plistDir, plistName)
 	if err := ioutil.WriteFile(plistPath, rw.Bytes(), 0644); err != nil {
-		fmt.Println("Use 'sudo' to install as a privileged system service.")
-		fmt.Println("Use '--userspace' to install as an user service.")
+
 		return fmt.Errorf("ioutil.WriteFile error: %v", err)
 	}
 	fmt.Printf("Installed. To start '%s' run the following:\n", c.Name)
 	// TODO template config file
-	fmt.Printf("\tlaunchctl load -w %s\n", strings.Replace(plistPath, c.home, "~", 1))
+	if "" != c.home {
+		plistPath = strings.Replace(plistPath, c.home, "~", 1)
+	}
+	sudo := ""
+	if c.System {
+		sudo = "sudo "
+	}
+	fmt.Printf("\t%slaunchctl load -w %s\n", sudo, plistPath)
 
 	return nil
 }
