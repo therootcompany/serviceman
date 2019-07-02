@@ -1,20 +1,20 @@
 # Pre-req
 # sudo mkdir -p {{ .Local }}/opt/{{ .Name }}/ {{ .Local }}/var/log/{{ .Name }}
-{{ if not .Local -}}
+{{ if .System -}}
 {{- if and .User ( ne "root" .User ) -}}
 # sudo adduser {{ .User }} --home /opt/{{ .Name }}
 # sudo chown -R {{ .User }}:{{ .Group }} /opt/{{ .Name }}/ /var/log/{{ .Name }}
 {{- end }}
 {{ end -}}
 # Post-install
-# sudo systemctl {{ if .Local -}} --user {{ end -}} daemon-reload
-# sudo systemctl {{ if .Local -}} --user {{ end -}} restart {{ .Name }}.service
-# sudo journalctl {{ if .Local -}} --user {{ end -}} -xefu {{ .Name }}
+# sudo systemctl {{ if not .System -}} --user {{ end -}} daemon-reload
+# sudo systemctl {{ if not .System -}} --user {{ end -}} restart {{ .Name }}.service
+# sudo journalctl {{ if not .System -}} --user {{ end -}} -xefu {{ .Name }}
 
 [Unit]
 Description={{ .Title }} - {{ .Desc }}
 Documentation={{ .URL }}
-{{ if not .Local -}}
+{{ if .System -}}
 After=network-online.target
 Wants=network-online.target systemd-networkd-wait-online.service
 {{- end }}
@@ -33,8 +33,10 @@ User={{ .User }}
 Group={{ .Group }}
 
 {{ end -}}
-WorkingDirectory={{ .Local }}/opt/{{ .Name }}
-ExecStart={{if .Interpreter }}{{ .Interpreter }} {{ end }}{{ .Local }}/opt/{{ .Name }}/{{ .Name }} {{ .Args }}
+{{ if .Workdir -}}
+WorkingDirectory={{ .Workdir }}
+{{ end -}}
+ExecStart={{if .Interpreter }}{{ .Interpreter }} {{ end }}{{ .Exec }} {{- range $arg := .Argv }}{{ $arg }} {{- end }}
 ExecReload=/bin/kill -USR1 $MAINPID
 
 {{if .Production -}}
@@ -80,7 +82,7 @@ NoNewPrivileges=true
 
 {{ end -}}
 [Install]
-{{ if not .Local -}}
+{{ if .System -}}
 WantedBy=multi-user.target
 {{- else -}}
 WantedBy=default.target

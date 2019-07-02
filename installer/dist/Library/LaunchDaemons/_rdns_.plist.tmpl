@@ -9,11 +9,9 @@
 		{{- if .Interpreter }}
 		<string>{{ .Interpreter }}</string>
 		{{- end }}
-		<string>{{ .Local }}/opt/{{ .Name }}/{{ .Exec }}</string>
-	  {{- if .Argv }}
+		<string>{{ .Exec }}</string>
 		{{- range $arg := .Argv }}
 		<string>{{ $arg }}</string>
-		{{- end }}
 	  {{- end }}
 	</array>
 	{{- if .Envs }}
@@ -60,9 +58,11 @@
 	<dict/>
 
 	{{ end -}}
+	{{ if .Workdir -}}
 	<key>WorkingDirectory</key>
-	<string>{{ .Local }}/opt/{{ .Name }}</string>
+	<string>{{ .Workdir }}</string>
 
+	{{ end -}}
 	<key>StandardErrorPath</key>
 	<string>{{ .LogDir }}/{{ .Name }}.log</string>
 	<key>StandardOutPath</key>

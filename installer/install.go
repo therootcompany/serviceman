@@ -3,6 +3,7 @@
 package installer
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -58,7 +59,7 @@ type Config struct {
 	Interpreter         string            `json:"interpreter"` // i.e. node, python
 	Exec                string            `json:"exec"`
 	Argv                []string          `json:"argv"`
-	Args                string            `json:"-"`
+	Workdir             string            `json:"workdir"`
 	Envs                map[string]string `json:"envs"`
 	User                string            `json:"user"`
 	Group               string            `json:"group"`
@@ -78,22 +79,16 @@ func Install(c *Config) error {
 	if "" == c.Exec {
 		c.Exec = c.Name
 	}
-	c.Args = strings.Join(c.Argv, " ")
 
-	// TODO handle non-system installs
-	// * ~/.local/opt/watchdog/watchdog
-	// * ~/.local/share/watchdog/var/log/
-	// * ~/.config/watchdog/watchdog.json
 	if !c.System {
 		home, err := os.UserHomeDir()
 		if nil != err {
+			fmt.Fprintf(os.Stderr, "Unrecoverable Error: %s", err)
+			os.Exit(4)
 			return err
+		} else {
+			c.home = home
 		}
-		c.home = home
-		c.Local = filepath.Join(c.home, ".local")
-		c.LogDir = filepath.Join(c.home, ".local", "share", c.Name, "var", "log")
-	} else {
-		c.LogDir = "/var/log/" + c.Name
 	}
 
 	err := install(c)
@@ -119,10 +114,15 @@ func IsPrivileged() bool {
 func WhereIs(exec string) (string, error) {
 	exec = filepath.ToSlash(exec)
 	if strings.Contains(exec, "/") {
-		// filepath.Clean(exec)
-		// it's a path (don't allow filenames with slashes)
-		// TODO stat
-		return exec, nil
+		// it's a path (so we don't allow filenames with slashes)
+		stat, err := os.Stat(exec)
+		if nil != err {
+			return "", err
+		}
+		if stat.IsDir() {
+			return "", fmt.Errorf("'%s' is not an executable file", exec)
+		}
+		return filepath.Abs(exec)
 	}
 	return whereIs(exec)
 }

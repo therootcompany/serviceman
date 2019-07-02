@@ -49,7 +49,7 @@ func install(c *Config) error {
 
 	// Write the file out
 	// TODO rdns
-	plistName := c.Name + ".plist"
+	plistName := c.ReverseDNS + ".plist"
 	plistPath := filepath.Join(plistDir, plistName)
 	if err := ioutil.WriteFile(plistPath, rw.Bytes(), 0644); err != nil {
 		fmt.Println("Use 'sudo' to install as a privileged system service.")
