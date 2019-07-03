@@ -111,17 +111,17 @@ func installServiceman(c *service.Service) ([]string, error) {
 	smbin := filepath.Join(smdir, `bin\serviceman.%s`, c.Name)
 
 	if smbin != self {
-		err := os.MkdirAll(filepath.Dir(smbin))
+		err := os.MkdirAll(filepath.Dir(smbin), 0755)
 		if nil != err {
-			return "", err
+			return nil, err
 		}
 		bin, err := ioutil.ReadFile(self)
 		if nil != err {
-			return "", err
+			return nil, err
 		}
-		err := ioutil.WriteFile(smbin, bin, 0755)
+		err = ioutil.WriteFile(smbin, bin, 0755)
 		if nil != err {
-			return "", err
+			return nil, err
 		}
 	}
 
@@ -130,10 +130,10 @@ func installServiceman(c *service.Service) ([]string, error) {
 		// this should be impossible, so we'll just panic
 		panic(err)
 	}
-	confpath := filepath.Join(smpath, `etc`, conf.Name+`.json`)
-	err := ioutil.WriteFile(confpath, b, 0640)
+	confpath := filepath.Join(smdir, `etc`, c.Name+`.json`)
+	err = ioutil.WriteFile(confpath, b, 0640)
 	if nil != err {
-		return err
+		return nil, err
 	}
 
 	return []string{
