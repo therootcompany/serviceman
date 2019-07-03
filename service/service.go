@@ -49,26 +49,26 @@ import (
 // These are documented as omitted from JSON.
 // Try to stick to what's outlined above.
 type Service struct {
-	Title               string            `json:"title"`
+	Title               string            `json:"title,omitempty"`
 	Name                string            `json:"name"`
-	Desc                string            `json:"desc"`
-	URL                 string            `json:"url"`
-	ReverseDNS          string            `json:"reverse_dns"` // i.e. com.example.foo-app
-	Interpreter         string            `json:"interpreter"` // i.e. node, python
+	Desc                string            `json:"desc,omitempty"`
+	URL                 string            `json:"url,omitempty"`
+	ReverseDNS          string            `json:"reverse_dns"`           // i.e. com.example.foo-app
+	Interpreter         string            `json:"interpreter,omitempty"` // i.e. node, python
 	Exec                string            `json:"exec"`
-	Argv                []string          `json:"argv"`
-	Workdir             string            `json:"workdir"`
-	Envs                map[string]string `json:"envs"`
-	User                string            `json:"user"`
-	Group               string            `json:"group"`
+	Argv                []string          `json:"argv,omitempty"`
+	Workdir             string            `json:"workdir,omitempty"`
+	Envs                map[string]string `json:"envs,omitempty"`
+	User                string            `json:"user,omitempty"`
+	Group               string            `json:"group,omitempty"`
 	Home                string            `json:"-"`
 	Local               string            `json:"-"`
 	Logdir              string            `json:"logdir"`
 	System              bool              `json:"system"`
 	Restart             bool              `json:"restart"`
-	Production          bool              `json:"production"`
-	PrivilegedPorts     bool              `json:"privileged_ports"`
-	MultiuserProtection bool              `json:"multiuser_protection"`
+	Production          bool              `json:"production,omitempty"`
+	PrivilegedPorts     bool              `json:"privileged_ports,omitempty"`
+	MultiuserProtection bool              `json:"multiuser_protection,omitempty"`
 }
 
 func (s *Service) Normalize(force bool) {

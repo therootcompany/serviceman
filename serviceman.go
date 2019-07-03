@@ -123,7 +123,7 @@ func install() {
 
 	conf.Normalize(force)
 
-	fmt.Printf("\n%#v\n\n", conf)
+	//fmt.Printf("\n%#v\n\n", conf)
 
 	err = installer.Install(conf)
 	if nil != err {
@@ -179,6 +179,12 @@ func run() {
 
 	s.Normalize(false)
 	fmt.Fprintf(os.Stdout, "Logdir: %s\n", s.Logdir)
+	err = os.MkdirAll(s.Logdir, 0755)
+	if nil != err {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return
+	}
+
 	if !daemonize {
 		fmt.Fprintf(os.Stdout, "Running %s %s %s\n", s.Interpreter, s.Exec, strings.Join(s.Argv, " "))
 		runner.Run(s)

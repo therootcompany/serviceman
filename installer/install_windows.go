@@ -108,7 +108,7 @@ func installServiceman(c *service.Service) ([]string, error) {
 	// TODO support service level services (which probably wouldn't need serviceman)
 	smdir = filepath.Join(c.Home, ".local", smdir)
 	// for now we'll scope the runner to the name of the application
-	smbin := filepath.Join(smdir, `bin\serviceman.%s`, c.Name)
+	smbin := filepath.Join(smdir, `bin\serviceman.`+c.Name)
 
 	if smbin != self {
 		err := os.MkdirAll(filepath.Dir(smbin), 0755)
@@ -130,8 +130,13 @@ func installServiceman(c *service.Service) ([]string, error) {
 		// this should be impossible, so we'll just panic
 		panic(err)
 	}
-	confpath := filepath.Join(smdir, `etc`, c.Name+`.json`)
-	err = ioutil.WriteFile(confpath, b, 0640)
+	confpath := filepath.Join(smdir, `etc`)
+	err = os.MkdirAll(confpath, 0755)
+	if nil != err {
+		return nil, err
+	}
+	conffile := filepath.Join(confpath, c.Name+`.json`)
+	err = ioutil.WriteFile(conffile, b, 0640)
 	if nil != err {
 		return nil, err
 	}
@@ -140,7 +145,7 @@ func installServiceman(c *service.Service) ([]string, error) {
 		smbin,
 		"run",
 		"--config",
-		confpath,
+		conffile,
 	}, nil
 }
 
