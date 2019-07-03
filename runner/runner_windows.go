@@ -2,11 +2,9 @@ package runner
 
 import (
 	"os/exec"
+	"syscall"
 )
 
-func init() {
-	cmd, _ := exec.LookPath("cmd.exe")
-	if "" != cmd {
-	  shellArgs = []string{cmd, "/c"}
-	}
+func backgroundCmd(cmd *exec.Cmd) {
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 }

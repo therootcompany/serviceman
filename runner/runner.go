@@ -52,6 +52,7 @@ func Run(conf *service.Service) {
 
 		start := time.Now()
 		cmd := exec.Command(binpath, args...)
+		backgroundCmd(cmd)
 		fmt.Fprintf(lf, "[%s] Starting %q %s \n", time.Now(), binpath, strings.Join(args, " "))
 
 		cmd.Stdin = nil
