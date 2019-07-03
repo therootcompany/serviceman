@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -77,24 +76,21 @@ func install(c *service.Service) error {
 			// it can be "the main thing"
 			bin = exec
 		}
-		if 0 != len(args) {
-			// On Windows the /c acts kinda like -- does on *nix,
-			// at least for commands in the registry that have arguments
-			setArgs = ` /c `
-		}
 
 		// The final string ends up looking something like one of these:
-		// "C:\Users\aj\.local\opt\appname\appname.js /c -p 8080"
-		// "C:\Program Files (x64)\nodejs\node.exe /c C:\Users\aj\.local\opt\appname\appname.js -p 8080"
+		// `"C:\Users\aj\.local\opt\appname\appname.js" -p 8080`
+		// `"C:\Program Files (x64)\nodejs\node.exe" C:\Users\aj\.local\opt\appname\appname.js -p 8080`
 		regSZ := bin + setArgs + strings.Join(c.Argv, " ")
 	*/
 
-	regSZ := fmt.Sprintf("%s /c %s", args[0], strings.Join(args[1:], " "))
+	regSZ := fmt.Sprintf(`"%s" %s`, args[0], strings.Join(args[1:], " "))
 	if len(regSZ) > 260 {
 		return fmt.Errorf("data value is too long for registry entry")
 	}
-	fmt.Println("Set Registry Key:")
-	fmt.Println(autorunKey, c.Title, regSZ)
+	// In order for a windows gui program to not show a console,
+	// it has to not output any messages?
+	//fmt.Println("Set Registry Key:")
+	//fmt.Println(autorunKey, c.Title, regSZ)
 	k.SetStringValue(c.Title, regSZ)
 
 	return nil
@@ -108,7 +104,7 @@ func installServiceman(c *service.Service) ([]string, error) {
 	// TODO support service level services (which probably wouldn't need serviceman)
 	smdir = filepath.Join(c.Home, ".local", smdir)
 	// for now we'll scope the runner to the name of the application
-	smbin := filepath.Join(smdir, `bin\serviceman.`+c.Name)
+	smbin := filepath.Join(smdir, `bin\serviceman.`+c.Name+`.exe`)
 
 	if smbin != self {
 		err := os.MkdirAll(filepath.Dir(smbin), 0755)
@@ -147,14 +143,4 @@ func installServiceman(c *service.Service) ([]string, error) {
 		"--config",
 		conffile,
 	}, nil
-}
-
-func whereIs(exe string) (string, error) {
-	// TODO use exec.LookPath instead
-	cmd := exec.Command("where.exe", exe)
-	out, err := cmd.Output()
-	if nil != err {
-		return "", err
-	}
-	return strings.TrimSpace(string(out)), nil
 }

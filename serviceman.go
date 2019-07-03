@@ -178,7 +178,7 @@ func run() {
 	}
 
 	s.Normalize(false)
-	fmt.Fprintf(os.Stdout, "Logdir: %s\n", s.Logdir)
+	//fmt.Fprintf(os.Stdout, "Logdir: %s\n", s.Logdir)
 	err = os.MkdirAll(s.Logdir, 0755)
 	if nil != err {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
@@ -186,7 +186,7 @@ func run() {
 	}
 
 	if !daemonize {
-		fmt.Fprintf(os.Stdout, "Running %s %s %s\n", s.Interpreter, s.Exec, strings.Join(s.Argv, " "))
+		//fmt.Fprintf(os.Stdout, "Running %s %s %s\n", s.Interpreter, s.Exec, strings.Join(s.Argv, " "))
 		runner.Run(s)
 		return
 	}

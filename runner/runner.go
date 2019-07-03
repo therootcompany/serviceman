@@ -5,10 +5,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"git.rootprojects.org/root/go-serviceman/service"
 )
+
+// Filled in on init by runner_windows.go
+var shellArgs = []string{}
 
 // Notes on spawning a child process
 // https://groups.google.com/forum/#!topic/golang-nuts/shST-SDqIp4
@@ -30,11 +34,17 @@ func Run(conf *service.Service) {
 	}
 	args = append(args, conf.Argv...)
 
+	if !conf.System && 0 != len(shellArgs) {
+		nargs := append(shellArgs[1:], binpath)
+		args = append(nargs, args...)
+		binpath = shellArgs[0]
+	}
+
 	for {
 		// setup the log
 		lf, err := os.OpenFile(logfile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 		if nil != err {
-			fmt.Fprintf(os.Stderr, "Could not open log file %q\n", logfile)
+			fmt.Fprintf(os.Stderr, "[%s] Could not open log file %q\n", time.Now(), logfile)
 			lf = os.Stderr
 		} else {
 			defer lf.Close()
@@ -42,6 +52,8 @@ func Run(conf *service.Service) {
 
 		start := time.Now()
 		cmd := exec.Command(binpath, args...)
+		fmt.Fprintf(lf, "[%s] Starting %q %s \n", time.Now(), binpath, strings.Join(args, " "))
+
 		cmd.Stdin = nil
 		cmd.Stdout = lf
 		cmd.Stderr = lf
@@ -50,20 +62,18 @@ func Run(conf *service.Service) {
 		}
 		err = cmd.Start()
 		if nil != err {
-			fmt.Fprintf(lf, "Could not start %q process: %s\n", conf.Name, err)
+			fmt.Fprintf(lf, "[%s] Could not start %q process: %s\n", time.Now(), conf.Name, err)
 		} else {
 			err = cmd.Wait()
 			if nil != err {
-				fmt.Fprintf(lf, "Process %q failed with error: %s\n", conf.Name, err)
+				fmt.Fprintf(lf, "[%s] Process %q failed with error: %s\n", time.Now(), conf.Name, err)
 			} else {
-				fmt.Fprintf(lf, "Process %q exited cleanly\n", conf.Name)
-				fmt.Printf("Process %q exited cleanly\n", conf.Name)
+				fmt.Fprintf(lf, "[%s] Process %q exited cleanly\n", time.Now(), conf.Name)
 			}
 		}
 
 		// if this is a oneshot... so it is
 		if !conf.Restart {
-			fmt.Printf("Not restarting %q because `restart` set to `false`\n", conf.Name)
 			fmt.Fprintf(lf, "Not restarting %q because `restart` set to `false`\n", conf.Name)
 			break
 		}

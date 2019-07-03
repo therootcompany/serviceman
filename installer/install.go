@@ -5,8 +5,8 @@ package installer
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"git.rootprojects.org/root/go-serviceman/service"
 )
@@ -42,26 +42,18 @@ func Install(c *service.Service) error {
 	return nil
 }
 
-// Returns true if we suspect that the current user (or process) will be able
+// IsPrivileged returns true if we suspect that the current user (or process) will be able
 // to write to system folders, bind to privileged ports, and otherwise
 // successfully run a system service.
 func IsPrivileged() bool {
 	return isPrivileged()
 }
 
-func WhereIs(exec string) (string, error) {
-	// TODO use exec.LookPath instead
-	exec = filepath.ToSlash(exec)
-	if strings.Contains(exec, "/") {
-		// it's a path (so we don't allow filenames with slashes)
-		stat, err := os.Stat(exec)
-		if nil != err {
-			return "", err
-		}
-		if stat.IsDir() {
-			return "", fmt.Errorf("'%s' is not an executable file", exec)
-		}
-		return filepath.Abs(exec)
+// WhereIs uses exec.LookPath to return an absolute filepath with forward slashes
+func WhereIs(exe string) (string, error) {
+	exepath, err := exec.LookPath(exe)
+	if nil != err {
+		return "", err
 	}
-	return whereIs(exec)
+	return filepath.Abs(filepath.ToSlash(exepath))
 }
