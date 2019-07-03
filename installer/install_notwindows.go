@@ -8,6 +8,7 @@ import (
 )
 
 func whereIs(exe string) (string, error) {
+	// TODO use exec.LookPath instead
 	cmd := exec.Command("command", "-v", exe)
 	out, err := cmd.Output()
 	if nil != err {

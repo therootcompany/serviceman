@@ -3,22 +3,52 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
-	"path/filepath"
+	"os/exec"
 	"strings"
 	"time"
 
 	"git.rootprojects.org/root/go-serviceman/installer"
+	"git.rootprojects.org/root/go-serviceman/runner"
+	"git.rootprojects.org/root/go-serviceman/service"
 )
 
 var GitRev = "000000000"
 var GitVersion = "v0.0.0"
 var GitTimestamp = time.Now().Format(time.RFC3339)
 
+func usage() {
+	fmt.Println("Usage: serviceman install ./foo-app -- --foo-arg")
+	fmt.Println("Usage: serviceman run --config ./foo-app.json")
+}
+
 func main() {
-	conf := &installer.Config{
+	if len(os.Args) < 2 {
+		fmt.Fprintf(os.Stderr, "Too few arguments: %s\n", strings.Join(os.Args, " "))
+		usage()
+		os.Exit(1)
+	}
+
+	top := os.Args[1]
+	os.Args = append(os.Args[:1], os.Args[2:]...)
+	switch top {
+	case "install":
+		install()
+	case "run":
+		run()
+	default:
+		fmt.Fprintf(os.Stderr, "Unknown argument %s\n", top)
+		usage()
+		os.Exit(1)
+	}
+}
+
+func install() {
+	conf := &service.Service{
 		Restart: true,
 	}
 
@@ -91,72 +121,7 @@ func main() {
 		conf.Argv = append(args[1:], conf.Argv...)
 	}
 
-	if "" == conf.Name {
-		ext := filepath.Ext(conf.Exec)
-		base := filepath.Base(conf.Exec[:len(conf.Exec)-len(ext)])
-		conf.Name = strings.ToLower(base)
-	}
-	if "" == conf.Title {
-		conf.Title = conf.Name
-	}
-	if "" == conf.ReverseDNS {
-		// technically should be something more like "com.example." + conf.Name,
-		// but whatever
-		conf.ReverseDNS = conf.Name
-	}
-
-	if !conf.System {
-		home, err := os.UserHomeDir()
-		if nil != err {
-			fmt.Fprintf(os.Stderr, "Unrecoverable Error: %s", err)
-			os.Exit(4)
-			return
-		}
-		conf.Local = filepath.Join(home, ".local")
-		conf.Logdir = filepath.Join(home, ".local", "share", conf.Name, "var", "log")
-	} else {
-		conf.Logdir = "/var/log/" + conf.Name
-	}
-
-	// Check to see if Exec exists
-	//   /whatever => must exist exactly
-	//   ./whatever => must exist in current or WorkDir(TODO)
-	//   whatever => may also exist in {{ .Local }}/opt/{{ .Name }}/{{ .Exec }}
-	_, err = os.Stat(conf.Exec)
-	if nil != err {
-		bad := true
-		if !strings.Contains(filepath.ToSlash(conf.Exec), "/") {
-			optpath := filepath.Join(conf.Local, "/opt", conf.Name, conf.Exec)
-			_, err := os.Stat(optpath)
-			if nil == err {
-				bad = false
-				fmt.Fprintf(os.Stderr, "Using '%s' for '%s'\n", optpath, conf.Exec)
-				conf.Exec = optpath
-			}
-		}
-
-		if bad {
-			// TODO look for it in WorkDir?
-			fmt.Fprintf(os.Stderr, "Error: '%s' could not be found.\n", conf.Exec)
-			if !force {
-				os.Exit(5)
-				return
-			}
-			execpath, err := filepath.Abs(conf.Exec)
-			if nil == err {
-				conf.Exec = execpath
-			}
-			fmt.Fprintf(os.Stderr, "Using '%s' anyway.\n", conf.Exec)
-		}
-	} else {
-		execpath, err := filepath.Abs(conf.Exec)
-		if nil != err {
-			fmt.Fprintf(os.Stderr, "Unrecoverable Error: %s", err)
-			os.Exit(4)
-		} else {
-			conf.Exec = execpath
-		}
-	}
+	conf.Normalize(force)
 
 	fmt.Printf("\n%#v\n\n", conf)
 
@@ -165,5 +130,74 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		fmt.Fprintf(os.Stderr, "Use 'sudo' to install as a privileged system service.\n")
 		fmt.Fprintf(os.Stderr, "Use '--user' to install as an user service.\n")
+	}
+}
+
+func run() {
+	var confpath string
+	var daemonize bool
+	flag.StringVar(&confpath, "config", "", "path to a config file to run")
+	flag.BoolVar(&daemonize, "daemon", false, "spawn a child process that lives in the background, and exit")
+	flag.Parse()
+
+	if "" == confpath {
+		fmt.Fprintf(os.Stderr, "%s", strings.Join(flag.Args(), " "))
+		fmt.Fprintf(os.Stderr, "--config /path/to/config.json is required\n")
+		usage()
+		os.Exit(1)
+	}
+
+	b, err := ioutil.ReadFile(confpath)
+	if nil != err {
+		fmt.Fprintf(os.Stderr, "Couldn't read config file: %s\n", err)
+		os.Exit(400)
+	}
+
+	s := &service.Service{}
+	err = json.Unmarshal(b, s)
+	if nil != err {
+		fmt.Fprintf(os.Stderr, "Couldn't JSON parse config file: %s\n", err)
+		os.Exit(400)
+	}
+
+	m := map[string]interface{}{}
+	err = json.Unmarshal(b, &m)
+	if nil != err {
+		fmt.Fprintf(os.Stderr, "Couldn't JSON parse config file: %s\n", err)
+		os.Exit(400)
+	}
+
+	// default Restart to true
+	if _, ok := m["restart"]; !ok {
+		s.Restart = true
+	}
+
+	if "" == s.Exec {
+		fmt.Fprintf(os.Stderr, "Missing exec\n")
+		os.Exit(400)
+	}
+
+	s.Normalize(false)
+	fmt.Fprintf(os.Stdout, "Logdir: %s\n", s.Logdir)
+	if !daemonize {
+		fmt.Fprintf(os.Stdout, "Running %s %s %s\n", s.Interpreter, s.Exec, strings.Join(s.Argv, " "))
+		runner.Run(s)
+		return
+	}
+
+	cmd := exec.Command(os.Args[0], "run", "--config", confpath)
+	// for debugging
+	/*
+		out, err := cmd.CombinedOutput()
+		if nil != err {
+			fmt.Println(err)
+		}
+		fmt.Println(string(out))
+	*/
+
+	err = cmd.Start()
+	if nil != err {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(500)
 	}
 }

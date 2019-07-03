@@ -2,6 +2,10 @@
 
 package installer
 
-func install(c *Config) error {
+import (
+	"git.rootprojects.org/root/go-serviceman/service"
+)
+
+func install(c *service.Service) error {
 	return nil, nil
 }

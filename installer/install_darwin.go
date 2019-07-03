@@ -10,9 +10,10 @@ import (
 	"text/template"
 
 	"git.rootprojects.org/root/go-serviceman/installer/static"
+	"git.rootprojects.org/root/go-serviceman/service"
 )
 
-func install(c *Config) error {
+func install(c *service.Service) error {
 	// Darwin-specific config options
 	if c.PrivilegedPorts {
 		if !c.System {
@@ -21,7 +22,7 @@ func install(c *Config) error {
 	}
 	plistDir := "/Library/LaunchDaemons/"
 	if !c.System {
-		plistDir = filepath.Join(c.home, "Library/LaunchAgents")
+		plistDir = filepath.Join(c.Home, "Library/LaunchAgents")
 	}
 
 	// Check paths first
@@ -57,8 +58,8 @@ func install(c *Config) error {
 	}
 	fmt.Printf("Installed. To start '%s' run the following:\n", c.Name)
 	// TODO template config file
-	if "" != c.home {
-		plistPath = strings.Replace(plistPath, c.home, "~", 1)
+	if "" != c.Home {
+		plistPath = strings.Replace(plistPath, c.Home, "~", 1)
 	}
 	sudo := ""
 	if c.System {

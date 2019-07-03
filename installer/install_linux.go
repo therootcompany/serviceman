@@ -9,9 +9,10 @@ import (
 	"text/template"
 
 	"git.rootprojects.org/root/go-serviceman/installer/static"
+	"git.rootprojects.org/root/go-serviceman/service"
 )
 
-func install(c *Config) error {
+func install(c *service.Service) error {
 	// Linux-specific config options
 	if c.System {
 		if "" == c.User {
@@ -30,7 +31,7 @@ func install(c *Config) error {
 		// * ~/.local/share/systemd/user/watchdog.service
 		// * ~/.config/systemd/user/watchdog.service
 		// https://wiki.archlinux.org/index.php/Systemd/User
-		serviceDir = filepath.Join(c.home, ".local/share/systemd/user")
+		serviceDir = filepath.Join(c.Home, ".local/share/systemd/user")
 		err := os.MkdirAll(filepath.Dir(serviceDir), 0755)
 		if nil != err {
 			return err
