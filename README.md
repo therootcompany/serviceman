@@ -86,7 +86,7 @@ curl https://rootprojects.org/serviceman/dist/darwin/amd64/serviceman -o service
 Windows 10: [64-bit Download](https://rootprojects.org/serviceman/dist/windows/amd64/serviceman.exe)
 
 ```
-powershell.exe Invoke-WebRequest https://rootprojects.org/serviceman/dist/windows/amd64/serviceman.exe -OutFile serviceman.exe
+powershell.exe $ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest https://rootprojects.org/serviceman/dist/windows/amd64/serviceman.exe -OutFile serviceman.exe
 ```
 
 Windows 7: [32-bit Download](https://rootprojects.org/serviceman/dist/windows/386/serviceman.exe)
