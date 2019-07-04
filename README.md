@@ -7,24 +7,21 @@ Because debugging launchctl, systemd, etc absolutely sucks!
 ...and I wanted a reasonable way to install [Telebit](https://telebit.io) on Windows.
 (see more in the **Why** section below)
 
-<details>
-<summary>User Mode Services</summary>
-  * `sytemctl --user` on Linux
-  * `launchctl` on MacOS
-  * `HKEY_CURRENT_USER/.../Run` on Windows
-</details>
-<details>
-<summary>System Services</summary>
-  * `sudo sytemctl` on Linux
-  * `sudo launchctl` on MacOS
-  * _not yet implemented_ on Windows
-</details>
+## Features
 
-## Contents
+- Unprivileged (User Mode) Services
+  - [x] Linux (`sytemctl --user`)
+  - [x] MacOS (`launchctl`)
+  - [x] Windows (`HKEY_CURRENT_USER/.../Run`)
+- Privileged (System) Services
+  - [x] Linux (`sudo sytemctl`)
+  - [x] MacOS (`sudo launchctl`)
+  - [ ] Windows (_not yet implemented_)
 
-- Install
+# Table of Contents
+
 - Usage
-- Build
+- Install
 - Examples
   - compiled programs
   - scripts
@@ -33,77 +30,145 @@ Because debugging launchctl, systemd, etc absolutely sucks!
   - python
   - ruby
 - Logging
-- Windows
 - Debugging
+- Windows
+- Building
 - Why
 - Legal
 
-# Install
-
-```bash
-curl https://rootprojects.org/serviceman/dist/$GOOS/$GOARCH/serviceman -o serviceman
-```
-
-Download `serviceman` for
-
-- [MacOS (64-bit darwin)](https://rootprojects.org/serviceman/dist/darwin/amd64/serviceman)
-  ```bash
-  curl https://rootprojects.org/serviceman/dist/darwin/amd64/serviceman -o serviceman
-  ```
-- [Windows 10 (64-bit)](https://rootprojects.org/serviceman/dist/windows/amd64/serviceman.exe)
-  ```console
-  powershell.exe Invoke-WebRequest https://rootprojects.org/serviceman/dist/windows/amd64/serviceman.exe -OutFile serviceman.exe
-  ```
-- [Windows 10 (32-bit)](https://rootprojects.org/serviceman/dist/windows/386/serviceman.exe)
-  ```console
-  powershell.exe Invoke-WebRequest https://rootprojects.org/serviceman/dist/windows/386/serviceman.exe -OutFile serviceman.exe
-  ```
-- [Linux (64-bit)](https://rootprojects.org/serviceman/dist/linux/amd64/serviceman)
-  ```bash
-  curl https://rootprojects.org/serviceman/dist/linux/amd64/serviceman -o serviceman
-  ```
-- [Linux (32-bit)](https://rootprojects.org/serviceman/dist/linux/386/serviceman)
-  ```bash
-  curl https://rootprojects.org/serviceman/dist/linux/386/serviceman -o serviceman
-  ```
-- [Raspberry Pi 4 (64-bit armv8)](https://rootprojects.org/serviceman/dist/linux/armv8/serviceman)
-  ```bash
-  curl https://rootprojects.org/serviceman/dist/linux/armv8/serviceman -o serviceman
-  ```
-- [Raspberry Pi 3 (armv7)](https://rootprojects.org/serviceman/dist/linux/armv7/serviceman)
-  ```bash
-  curl https://rootprojects.org/serviceman/dist/linux/armv7/serviceman -o serviceman
-  ```
-- [ARMv6](https://rootprojects.org/serviceman/dist/linux/armv6/serviceman)
-  ```bash
-  curl https://rootprojects.org/serviceman/dist/linux/armv6/serviceman -o serviceman
-  ```
-- [Raspberry Pi Zero (armv5)](https://rootprojects.org/serviceman/dist/linux/armv5/serviceman)
-  ```bash
-  curl https://rootprojects.org/serviceman/dist/linux/armv5/serviceman -o serviceman
-  ```
-
 # Usage
 
-```bash
+```
 serviceman add [options] [interpreter] <service> -- [service options]
 ```
 
-```bash
+```
+serviceman add foo.exe
+```
+
+```
+serviceman add --title "Foo App" node ./foo.js -- --bar
+```
+
+```
 serviceman add --help
 ```
 
-```bash
+```
 serviceman version
+```
+
+# Install
+
+There are a number of pre-built binaries.
+
+If none of them work for you, or you prefer to build from source,
+see the instructions for building far down below.
+
+## Downloads
+
+### MacOS
+
+MacOS (darwin): [64-bit Download ](https://rootprojects.org/serviceman/dist/darwin/amd64/serviceman)
+
+```
+curl https://rootprojects.org/serviceman/dist/darwin/amd64/serviceman -o serviceman
+```
+
+### Windows
+
+<details>
+<summary>See download options</summary>
+Windows 10: [64-bit Download](https://rootprojects.org/serviceman/dist/windows/amd64/serviceman.exe)
+
+```
+powershell.exe Invoke-WebRequest https://rootprojects.org/serviceman/dist/windows/amd64/serviceman.exe -OutFile serviceman.exe
+```
+
+Windows 7: [32-bit Download](https://rootprojects.org/serviceman/dist/windows/386/serviceman.exe)
+
+```
+powershell.exe "(New-Object Net.WebClient).DownloadFile('https://rootprojects.org/serviceman/dist/windows/386/serviceman.exe', 'serviceman.exe')"
+```
+
+</details>
+
+### Linux
+
+<details>
+<summary>See download options</summary>
+
+Linux (64-bit): [Download](https://rootprojects.org/serviceman/dist/linux/amd64/serviceman)
+
+```
+curl https://rootprojects.org/serviceman/dist/linux/amd64/serviceman -o serviceman
+```
+
+Linux (32-bit): [Download](https://rootprojects.org/serviceman/dist/linux/386/serviceman)
+
+```
+curl https://rootprojects.org/serviceman/dist/linux/386/serviceman -o serviceman
+```
+
+</details>
+
+### Raspberry Pi (Linux ARM)
+
+<details>
+<summary>See download options</summary>
+
+RPi 4 (64-bit armv8): [Download](https://rootprojects.org/serviceman/dist/linux/armv8/serviceman)
+
+```
+curl https://rootprojects.org/serviceman/dist/linux/armv8/serviceman -o serviceman`
+```
+
+RPi 3 (armv7): [Download](https://rootprojects.org/serviceman/dist/linux/armv7/serviceman)
+
+```
+curl https://rootprojects.org/serviceman/dist/linux/armv7/serviceman -o serviceman
+```
+
+ARMv6: [Download](https://rootprojects.org/serviceman/dist/linux/armv6/serviceman)
+
+```
+curl https://rootprojects.org/serviceman/dist/linux/armv6/serviceman -o serviceman
+```
+
+RPi Zero (armv5): [Download](https://rootprojects.org/serviceman/dist/linux/armv5/serviceman)
+
+```
+curl https://rootprojects.org/serviceman/dist/linux/armv5/serviceman -o serviceman
+```
+
+</details>
+
+### Add to PATH
+
+**Windows**
+
+```
+mkdir %userprofile%\bin
+reg add HKEY_CURRENT_USER\Environment /v PATH /d "%PATH%;%userprofile%\bin"
+move serviceman.exe %userprofile%\bin\serviceman.exe
+```
+
+**All Others**
+
+```
+sudo mv ./serviceman /usr/local/bin/
 ```
 
 # Examples
 
-**Compiled Apps**
+> **serviceman add** &lt;program> **--** &lt;program options>
 
-Normally you might run your program something like this:
+<details>
+<summary>Compiled Programs</summary>
 
-```bash
+Normally you might your program somewhat like this:
+
+```
 dinglehopper --port 8421
 ```
 
@@ -111,16 +176,9 @@ Adding a service for that program with `serviceman` would look like this:
 
 > **serviceman add** dinglehopper **--** --port 8421
 
-`serviceman` will find `dinglehopper` in your PATH, but if you have
-any arguments with relative paths, you should switch to using absolute paths.
+serviceman will find dinglehopper in your PATH.
 
-```bash
-dinglehopper --config ./conf.json
-```
-
-becomes
-
-> **serviceman add** dinglehopper **--** --config **/Users/aj/dinglehopper/conf.json**
+</details>
 
 <details>
 <summary>Using with scripts</summary>
@@ -130,7 +188,7 @@ in order for `serviceman` to configure the service correctly.
 
 For example, if you had a bash script that you normally ran like this:
 
-```bash
+```
 ./snarfblat.sh --port 8421
 ```
 
@@ -148,7 +206,7 @@ An operating system can't "run" text files (even if the executable bit is set).
 Scripts require an _interpreter_. Often this is denoted at the top of
 "executable" scripts with something like one of these:
 
-```bash
+```
 #!/usr/bin/env ruby
 ```
 
@@ -222,6 +280,20 @@ See **Using with scripts** for more detailed information.
 
 </details>
 
+## Relative vs Absolute Paths
+
+Although serviceman can expand the executable's path,
+if you have any arguments with relative paths
+you should switch to using absolute paths.
+
+```
+dinglehopper --config ./conf.json
+```
+
+```
+serviceman add dinglehopper -- --config /Users/me/dinglehopper/conf.json
+```
+
 # Logging
 
 When you run `serviceman add` it will either give you an error or
@@ -248,22 +320,6 @@ If anything about the logging sucks, tell me... unless they're your logs
 
 That said, my goal is that it shouldn't take an IT genius to interpret
 why your app failed to start.
-
-# Peculiarities of Windows
-
-Windows doesn't have a userspace daemon launcher.
-This means that if your application crashes, it won't automatically restart.
-
-However, `serviceman` handles this by not directly adding your application
-to `HKEY_CURRENT_USER/.../Run`, but rather installing a copy of _itself_
-instead, which runs your application and automatically restarts it whenever it
-exits.
-
-If the application fails to start `serviceman` will retry continually,
-but it does have an exponential backoff of up to 1 minute between failed
-restart attempts.
-
-See the bit on `serviceman run` in the **Debugging** section down below for more information.
 
 # Debugging
 
@@ -293,7 +349,7 @@ Where `conf.json` looks something like
 ```json
 {
 	"title": "Demo",
-	"exec": "/Users/aj/go-demo/demo",
+	"exec": "/Users/me/go-demo/demo",
 	"argv": ["--foo", "bar", "--baz", "qux"]
 }
 ```
@@ -333,6 +389,22 @@ The fact that they don't is an artifact of `run` being created specifically
 for Windows.
 
 If you have gripes about it, tell me. It shouldn't suck. That's the goal anyway.
+
+## Peculiarities of Windows
+
+Windows doesn't have a userspace daemon launcher.
+This means that if your application crashes, it won't automatically restart.
+
+However, `serviceman` handles this by not directly adding your application
+to `HKEY_CURRENT_USER/.../Run`, but rather installing a copy of _itself_
+instead, which runs your application and automatically restarts it whenever it
+exits.
+
+If the application fails to start `serviceman` will retry continually,
+but it does have an exponential backoff of up to 1 minute between failed
+restart attempts.
+
+See the bit on `serviceman run` in the **Debugging** section down below for more information.
 
 # Building
 
