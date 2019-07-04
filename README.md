@@ -20,6 +20,8 @@ Because debugging launchctl, systemd, etc absolutely sucks!
   * _not yet implemented_ on Windows
 </details>
 
+## Contents
+
 - Install
 - Usage
 - Build
