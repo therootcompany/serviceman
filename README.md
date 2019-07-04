@@ -89,10 +89,22 @@ Windows 10: [64-bit Download](https://rootprojects.org/serviceman/dist/windows/a
 powershell.exe $ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest https://rootprojects.org/serviceman/dist/windows/amd64/serviceman.exe -OutFile serviceman.exe
 ```
 
+**Debug version**:
+
+```
+powershell.exe $ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest https://rootprojects.org/serviceman/dist/windows/amd64/serviceman.debug.exe -OutFile serviceman.debug.exe
+```
+
 Windows 7: [32-bit Download](https://rootprojects.org/serviceman/dist/windows/386/serviceman.exe)
 
 ```
 powershell.exe "(New-Object Net.WebClient).DownloadFile('https://rootprojects.org/serviceman/dist/windows/386/serviceman.exe', 'serviceman.exe')"
+```
+
+**Debug version**:
+
+```
+powershell.exe "(New-Object Net.WebClient).DownloadFile('https://rootprojects.org/serviceman/dist/windows/386/serviceman.debug.exe', 'serviceman.debug.exe')"
 ```
 
 </details>
@@ -396,6 +408,23 @@ If you have gripes about it, tell me. It shouldn't suck. That's the goal anyway.
 
 ## Peculiarities of Windows
 
+# Console vs No Console
+
+Windows binaries can be built either for the console or the GUI.
+
+When they're built for the console they can hide themselves when they start.
+They must open up a terminal window.
+
+When they're built for the GUI they can't print any output - even if they're started in the terminal.
+
+This is why there's a **Debug version** for the windows binaries -
+so that you can get your arguments correct with the one and then
+switch to the other.
+
+There's probably a clever way to work around this, but I don't know what it is yet.
+
+# No userspace launcher
+
 Windows doesn't have a userspace daemon launcher.
 This means that if your application crashes, it won't automatically restart.
 
@@ -408,7 +437,7 @@ If the application fails to start `serviceman` will retry continually,
 but it does have an exponential backoff of up to 1 minute between failed
 restart attempts.
 
-See the bit on `serviceman run` in the **Debugging** section down below for more information.
+See the bit on `serviceman run` in the **Debugging** section up above for more information.
 
 # Building
 
