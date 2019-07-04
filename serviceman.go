@@ -133,6 +133,8 @@ func add() {
 		fmt.Fprintf(os.Stderr, "Use 'sudo' to add service as a privileged system service.\n")
 		fmt.Fprintf(os.Stderr, "Use '--user' to add service as an user service.\n")
 	}
+
+	fmt.Printf("Once started, logs will be found at:\n\t%s\n", conf.Logdir)
 }
 
 func run() {
@@ -180,7 +182,7 @@ func run() {
 	}
 
 	s.Normalize(false)
-	//fmt.Fprintf(os.Stdout, "Logdir: %s\n", s.Logdir)
+	fmt.Printf("All output will be directed to the logs at:\n\t%s\n", s.Logdir)
 	err = os.MkdirAll(s.Logdir, 0755)
 	if nil != err {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
