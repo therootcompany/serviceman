@@ -40,17 +40,48 @@ Because debugging launchctl, systemd, etc absolutely sucks!
 
 # Install
 
+```bash
+curl https://rootprojects.org/serviceman/dist/$GOOS/$GOARCH/serviceman -o serviceman
+```
+
 Download `serviceman` for
 
 - [MacOS (64-bit darwin)](https://rootprojects.org/serviceman/dist/darwin/amd64/serviceman)
+  ```bash
+  curl https://rootprojects.org/serviceman/dist/darwin/amd64/serviceman -o serviceman
+  ```
 - [Windows 10 (64-bit)](https://rootprojects.org/serviceman/dist/windows/amd64/serviceman.exe)
+  ```console
+  powershell.exe Invoke-WebRequest https://rootprojects.org/serviceman/dist/windows/amd64/serviceman.exe -OutFile serviceman.exe
+  ```
 - [Windows 10 (32-bit)](https://rootprojects.org/serviceman/dist/windows/386/serviceman.exe)
+  ```console
+  powershell.exe Invoke-WebRequest https://rootprojects.org/serviceman/dist/windows/386/serviceman.exe -OutFile serviceman.exe
+  ```
 - [Linux (64-bit)](https://rootprojects.org/serviceman/dist/linux/amd64/serviceman)
+  ```bash
+  curl https://rootprojects.org/serviceman/dist/linux/amd64/serviceman -o serviceman
+  ```
 - [Linux (32-bit)](https://rootprojects.org/serviceman/dist/linux/386/serviceman)
+  ```bash
+  curl https://rootprojects.org/serviceman/dist/linux/386/serviceman -o serviceman
+  ```
 - [Raspberry Pi 4 (64-bit armv8)](https://rootprojects.org/serviceman/dist/linux/armv8/serviceman)
+  ```bash
+  curl https://rootprojects.org/serviceman/dist/linux/armv8/serviceman -o serviceman
+  ```
 - [Raspberry Pi 3 (armv7)](https://rootprojects.org/serviceman/dist/linux/armv7/serviceman)
-- [Raspberry Pi 2 (armv6)](https://rootprojects.org/serviceman/dist/linux/armv6/serviceman)
+  ```bash
+  curl https://rootprojects.org/serviceman/dist/linux/armv7/serviceman -o serviceman
+  ```
+- [ARMv6](https://rootprojects.org/serviceman/dist/linux/armv6/serviceman)
+  ```bash
+  curl https://rootprojects.org/serviceman/dist/linux/armv6/serviceman -o serviceman
+  ```
 - [Raspberry Pi Zero (armv5)](https://rootprojects.org/serviceman/dist/linux/armv5/serviceman)
+  ```bash
+  curl https://rootprojects.org/serviceman/dist/linux/armv5/serviceman -o serviceman
+  ```
 
 # Usage
 
