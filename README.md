@@ -20,21 +20,21 @@ Because debugging launchctl, systemd, etc absolutely sucks!
   * _not yet implemented_ on Windows
 </details>
 
-- **Install**
-- **Usage**
-- **Build**
-- **Examples**
+- Install
+- Usage
+- Build
+- Examples
   - compiled programs
   - scripts
   - bash
   - node
   - python
   - ruby
-- **Logging**
-- **Windows**
-- **Debugging**
-- **Why**
-- **Legal**
+- Logging
+- Windows
+- Debugging
+- Why
+- Legal
 
 # Install
 
