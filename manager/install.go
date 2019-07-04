@@ -1,6 +1,6 @@
 //go:generate go run -mod=vendor github.com/UnnoTed/fileb0x b0x.toml
 
-package installer
+package manager
 
 import (
 	"fmt"

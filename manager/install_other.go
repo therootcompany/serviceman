@@ -1,6 +1,6 @@
 // +build !windows,!linux,!darwin
 
-package installer
+package manager
 
 import (
 	"git.rootprojects.org/root/go-serviceman/service"

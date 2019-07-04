@@ -1,4 +1,4 @@
-package installer
+package manager
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"git.rootprojects.org/root/go-serviceman/installer/static"
+	"git.rootprojects.org/root/go-serviceman/manager/static"
 	"git.rootprojects.org/root/go-serviceman/service"
 )
 

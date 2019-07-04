@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"git.rootprojects.org/root/go-serviceman/installer"
+	"git.rootprojects.org/root/go-serviceman/manager"
 	"git.rootprojects.org/root/go-serviceman/runner"
 	"git.rootprojects.org/root/go-serviceman/service"
 )
@@ -22,7 +22,7 @@ var GitVersion = "v0.0.0"
 var GitTimestamp = time.Now().Format(time.RFC3339)
 
 func usage() {
-	fmt.Println("Usage: serviceman install ./foo-app -- --foo-arg")
+	fmt.Println("Usage: serviceman add ./foo-app -- --foo-arg")
 	fmt.Println("Usage: serviceman run --config ./foo-app.json")
 }
 
@@ -36,8 +36,10 @@ func main() {
 	top := os.Args[1]
 	os.Args = append(os.Args[:1], os.Args[2:]...)
 	switch top {
-	case "install":
-		install()
+	case "version":
+		fmt.Println(GitVersion, GitTimestamp, GitRev)
+	case "add":
+		add()
 	case "run":
 		run()
 	default:
@@ -47,7 +49,7 @@ func main() {
 	}
 }
 
-func install() {
+func add() {
 	conf := &service.Service{
 		Restart: true,
 	}
@@ -73,8 +75,8 @@ func install() {
 	flag.StringVar(&conf.URL, "url", "", "the documentation on home page of the service")
 	//flag.StringVar(&conf.Workdir, "workdir", "", "the directory in which the service should be started")
 	flag.StringVar(&conf.ReverseDNS, "rdns", "", "a plist-friendly Reverse DNS name for launchctl (ex: com.example.foo-app)")
-	flag.BoolVar(&forSystem, "system", false, "attempt to install system service as an unprivileged/unelevated user")
-	flag.BoolVar(&forUser, "user", false, "install user space / user mode service even when admin/root/sudo/elevated")
+	flag.BoolVar(&forSystem, "system", false, "attempt to add system service as an unprivileged/unelevated user")
+	flag.BoolVar(&forUser, "user", false, "add user space / user mode service even when admin/root/sudo/elevated")
 	flag.BoolVar(&force, "force", false, "if the interpreter or executable doesn't exist, or things don't make sense, try anyway")
 	flag.StringVar(&conf.User, "username", "", "run the service as this user")
 	flag.StringVar(&conf.Group, "groupname", "", "run the service as this group")
@@ -92,17 +94,17 @@ func install() {
 	} else if forSystem {
 		conf.System = true
 	} else {
-		conf.System = installer.IsPrivileged()
+		conf.System = manager.IsPrivileged()
 	}
 
 	n := len(args)
 	if 0 == n {
-		fmt.Println("Usage: serviceman install ./foo-app -- --foo-arg")
+		fmt.Println("Usage: serviceman add ./foo-app -- --foo-arg")
 		os.Exit(2)
 		return
 	}
 
-	execpath, err := installer.WhereIs(args[0])
+	execpath, err := manager.WhereIs(args[0])
 	if nil != err {
 		fmt.Fprintf(os.Stderr, "Error: '%s' could not be found.\n", args[0])
 		if !force {
@@ -125,11 +127,11 @@ func install() {
 
 	//fmt.Printf("\n%#v\n\n", conf)
 
-	err = installer.Install(conf)
+	err = manager.Install(conf)
 	if nil != err {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
-		fmt.Fprintf(os.Stderr, "Use 'sudo' to install as a privileged system service.\n")
-		fmt.Fprintf(os.Stderr, "Use '--user' to install as an user service.\n")
+		fmt.Fprintf(os.Stderr, "Use 'sudo' to add service as a privileged system service.\n")
+		fmt.Fprintf(os.Stderr, "Use '--user' to add service as an user service.\n")
 	}
 }
 

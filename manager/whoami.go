@@ -1,6 +1,6 @@
 // +build !windows
 
-package installer
+package manager
 
 import "os/user"
 
