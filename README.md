@@ -38,6 +38,8 @@ Because debugging launchctl, systemd, etc absolutely sucks!
 
 # Usage
 
+The basic pattern of usage, and what that might look like:
+
 ```
 serviceman add [options] [interpreter] <service> -- [service options]
 ```
@@ -49,6 +51,8 @@ serviceman add foo.exe
 ```
 serviceman add --title "Foo App" node ./foo.js -- --bar
 ```
+
+You can also view the help and the version:
 
 ```
 serviceman add --help
