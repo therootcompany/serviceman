@@ -100,11 +100,15 @@ func install(c *service.Service) error {
 func installServiceman(c *service.Service) ([]string, error) {
 	// TODO check version and upgrade or dismiss
 	self := os.Args[0]
+	debug := ""
+	if strings.Contains(self, "debug.exe") {
+		debug = "debug."
+	}
 	smdir := `\opt\serviceman`
 	// TODO support service level services (which probably wouldn't need serviceman)
 	smdir = filepath.Join(c.Home, ".local", smdir)
 	// for now we'll scope the runner to the name of the application
-	smbin := filepath.Join(smdir, `bin\serviceman.`+c.Name+`.exe`)
+	smbin := filepath.Join(smdir, `bin\serviceman.`+debug+c.Name+`.exe`)
 
 	if smbin != self {
 		err := os.MkdirAll(filepath.Dir(smbin), 0755)
