@@ -134,7 +134,8 @@ func add() {
 		fmt.Fprintf(os.Stderr, "Use '--user' to add service as an user service.\n")
 	}
 
-	fmt.Printf("Once started, logs will be found at:\n\t%s\n", conf.Logdir)
+	fmt.Printf("If all went well the logs should have been created at:\n\t%s\n", conf.Logdir)
+	fmt.Println()
 }
 
 func run() {

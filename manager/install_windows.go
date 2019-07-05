@@ -14,6 +14,17 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
+var (
+	srvLen      int
+	srvExt      = ".json"
+	srvSysPath  = "/opt/serviceman/etc"
+	srvUserPath = ".local/opt/serviceman/etc"
+)
+
+func init() {
+	srvLen = len(srvExt)
+}
+
 // TODO nab some goodness from https://github.com/takama/daemon
 
 // TODO system service requires elevated privileges

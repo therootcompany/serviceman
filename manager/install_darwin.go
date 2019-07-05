@@ -6,12 +6,71 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"text/template"
 
 	"git.rootprojects.org/root/go-serviceman/manager/static"
 	"git.rootprojects.org/root/go-serviceman/service"
 )
+
+const (
+	srvExt      = ".plist"
+	srvSysPath  = "/Library/LaunchDaemons"
+	srvUserPath = "Library/LaunchAgents"
+)
+
+var srvLen int
+
+func init() {
+	srvLen = len(srvExt)
+}
+
+func start(system bool, home string, name string) error {
+	sys, user, err := getMatchingSrvs(home, name)
+	if nil != err {
+		return err
+	}
+
+	var service string
+	if system {
+		service, err = getOneSysSrv(sys, user, name)
+		if nil != err {
+			return err
+		}
+		service = filepath.Join(srvSysPath, service)
+	} else {
+		service, err = getOneUserSrv(home, sys, user, name)
+		if nil != err {
+			return err
+		}
+		service = filepath.Join(home, srvUserPath, service)
+	}
+
+	cmds := []Runnable{
+		Runnable{
+			Exec: "launchctl",
+			Args: []string{"unload", "-w", service},
+			Must: false,
+		},
+		Runnable{
+			Exec: "launchctl",
+			Args: []string{"load", "-w", service},
+			Must: true,
+		},
+	}
+
+	fmt.Println()
+	for i := range cmds {
+		exe := cmds[i]
+		fmt.Println(exe.String())
+		err := exe.Run()
+		if nil != err {
+			return err
+		}
+	}
+	fmt.Println()
+
+	return nil
+}
 
 func install(c *service.Service) error {
 	// Darwin-specific config options
@@ -20,9 +79,9 @@ func install(c *service.Service) error {
 			return fmt.Errorf("You must use root-owned LaunchDaemons (not user-owned LaunchAgents) to use priveleged ports on OS X")
 		}
 	}
-	plistDir := "/Library/LaunchDaemons/"
+	plistDir := srvSysPath
 	if !c.System {
-		plistDir = filepath.Join(c.Home, "Library/LaunchAgents")
+		plistDir = filepath.Join(c.Home, srvUserPath)
 	}
 
 	// Check paths first
@@ -56,16 +115,32 @@ func install(c *service.Service) error {
 
 		return fmt.Errorf("ioutil.WriteFile error: %v", err)
 	}
-	fmt.Printf("Installed. To start '%s' run the following:\n", c.Name)
-	// TODO template config file
-	if "" != c.Home {
-		plistPath = strings.Replace(plistPath, c.Home, "~", 1)
-	}
-	sudo := ""
-	if c.System {
-		sudo = "sudo "
-	}
-	fmt.Printf("\t%slaunchctl load -w %s\n", sudo, plistPath)
 
+	// TODO --no-start
+	err = start(c.System, c.Home, c.ReverseDNS)
+	if nil != err {
+		fmt.Printf("If things don't go well you should be able to get additional logging from launchctl:\n")
+		fmt.Printf("\tsudo launchctl log level debug\n")
+		fmt.Printf("\ttail -f /var/log/system.log\n")
+		return err
+	}
+
+	fmt.Printf("Added and started '%s' as a launchctl service.\n", c.Name)
 	return nil
+
+	/*
+		fmt.Printf("Installed. To start '%s' run the following:\n", c.Name)
+		// TODO template config file
+		if "" != c.Home {
+			plistPath = strings.Replace(plistPath, c.Home, "~", 1)
+		}
+		sudo := ""
+		if c.System {
+			sudo = "sudo "
+		}
+		fmt.Printf("\t%slaunchctl load -w %s\n", sudo, plistPath)
+
+
+		return nil
+	*/
 }

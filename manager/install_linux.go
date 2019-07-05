@@ -12,6 +12,17 @@ import (
 	"git.rootprojects.org/root/go-serviceman/service"
 )
 
+var (
+	srvLen      int
+	srvExt      = ".service"
+	srvSysPath  = "/etc/systemd/system"
+	srvUserPath = ".local/share/systemd/user"
+)
+
+func init() {
+	srvLen = len(srvExt)
+}
+
 func install(c *service.Service) error {
 	// Linux-specific config options
 	if c.System {
@@ -22,7 +33,7 @@ func install(c *service.Service) error {
 	if "" == c.Group {
 		c.Group = c.User
 	}
-	serviceDir := "/etc/systemd/system/"
+	serviceDir := srvSysPath
 
 	// Check paths first
 	serviceName := c.Name + ".service"
@@ -31,7 +42,7 @@ func install(c *service.Service) error {
 		// * ~/.local/share/systemd/user/watchdog.service
 		// * ~/.config/systemd/user/watchdog.service
 		// https://wiki.archlinux.org/index.php/Systemd/User
-		serviceDir = filepath.Join(c.Home, ".local/share/systemd/user")
+		serviceDir = filepath.Join(c.Home, srvUserPath)
 		err := os.MkdirAll(filepath.Dir(serviceDir), 0755)
 		if nil != err {
 			return err
