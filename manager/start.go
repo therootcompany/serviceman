@@ -99,10 +99,10 @@ func getSystemSrvs() ([]string, error) {
 }
 
 func getUserSrvs(home string) ([]string, error) {
-	dir := filepath.Join(home, srvUserPath)
-	return getSrvs(dir)
+	return getSrvs(filepath.Join(home, srvUserPath))
 }
 
+// "come.example.foo.plist" matches "foo"
 func filterMatchingSrvs(plists []string, name string) []string {
 	filtered := []string{}
 
@@ -148,59 +148,45 @@ func getExactSrvMatch(srvs []string, name string) string {
 }
 
 func getOneSysSrv(sys []string, user []string, name string) (string, error) {
-	service := getExactSrvMatch(user, name)
-	if "" != service {
-		return service, nil
+	if service := getExactSrvMatch(user, name); "" != service {
+		return filepath.Join(srvSysPath, service), nil
 	}
 
-	var errstr string
-	// system service was wanted
 	n := len(sys)
 	switch {
 	case 0 == n:
-		errstr += fmt.Sprintf("Didn't find user service matching %q\n", name)
+		errstr := fmt.Sprintf("Didn't find user service matching %q\n", name)
 		if 0 != len(user) {
 			errstr += fmt.Sprintf("Did you intend to run a user service instead?\n\t%s\n", strings.Join(user, "\n\t"))
 		}
-	case n > 1:
-		errstr += fmt.Sprintf("Found more than one matching service:\n\t%s\n", strings.Join(sys, "\n\t"))
-	default:
-		service = filepath.Join(srvSysPath, sys[0])
-	}
-
-	if "" != errstr {
 		return "", fmt.Errorf(errstr)
+	case n > 1:
+		errstr := fmt.Sprintf("Found more than one matching service:\n\t%s\n", strings.Join(sys, "\n\t"))
+		return "", fmt.Errorf(errstr)
+	default:
+		return filepath.Join(srvSysPath, sys[0]), nil
 	}
-
-	return service, nil
 }
 
 func getOneUserSrv(home string, sys []string, user []string, name string) (string, error) {
-	service := getExactSrvMatch(user, name)
-	if "" != service {
-		return service, nil
+	if service := getExactSrvMatch(user, name); "" != service {
+		return filepath.Join(home, srvUserPath, service), nil
 	}
 
-	var errstr string
-	// user service was wanted
 	n := len(user)
 	switch {
 	case 0 == n:
-		errstr += fmt.Sprintf("Didn't find user service matching %q\n", name)
+		errstr := fmt.Sprintf("Didn't find user service matching %q\n", name)
 		if 0 != len(sys) {
 			errstr += fmt.Sprintf("Did you intend to run a system service instead?\n\t%s\n", strings.Join(sys, "\n\t"))
 		}
-	case n > 1:
-		errstr += fmt.Sprintf("Found more than one matching service:\n\t%s\n", strings.Join(user, "\n\t"))
-	default:
-		service = filepath.Join(home, srvUserPath, user[0]+srvExt)
-	}
-
-	if "" != errstr {
 		return "", fmt.Errorf(errstr)
+	case n > 1:
+		errstr := fmt.Sprintf("Found more than one matching service:\n\t%s\n", strings.Join(user, "\n\t"))
+		return "", fmt.Errorf(errstr)
+	default:
+		return filepath.Join(home, srvUserPath, user[0]), nil
 	}
-
-	return service, nil
 }
 
 func adjustPrivs(system bool, cmds []Runnable) []Runnable {

@@ -35,19 +35,17 @@ func start(system bool, home string, name string) error {
 		return err
 	}
 
-	var service string
+	// var service string
 	if system {
-		service, err = getOneSysSrv(sys, user, name)
+		_, err = getOneSysSrv(sys, user, name)
 		if nil != err {
 			return err
 		}
-		service = filepath.Join(srvSysPath, service)
 	} else {
-		service, err = getOneUserSrv(home, sys, user, name)
+		_, err = getOneUserSrv(home, sys, user, name)
 		if nil != err {
 			return err
 		}
-		service = filepath.Join(home, srvUserPath, service)
 	}
 
 	var cmds []Runnable

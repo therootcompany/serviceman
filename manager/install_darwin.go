@@ -36,13 +36,11 @@ func start(system bool, home string, name string) error {
 		if nil != err {
 			return err
 		}
-		service = filepath.Join(srvSysPath, service)
 	} else {
 		service, err = getOneUserSrv(home, sys, user, name)
 		if nil != err {
 			return err
 		}
-		service = filepath.Join(home, srvUserPath, service)
 	}
 
 	cmds := []Runnable{
@@ -52,9 +50,10 @@ func start(system bool, home string, name string) error {
 			Must: false,
 		},
 		Runnable{
-			Exec: "launchctl",
-			Args: []string{"load", "-w", service},
-			Must: true,
+			Exec:     "launchctl",
+			Args:     []string{"load", "-w", service},
+			Must:     true,
+			Badwords: []string{"No such file or directory", "service already loaded"},
 		},
 	}
 
