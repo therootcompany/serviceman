@@ -13,14 +13,98 @@ import (
 )
 
 var (
-	srvLen      int
-	srvExt      = ".service"
-	srvSysPath  = "/etc/systemd/system"
-	srvUserPath = ".local/share/systemd/user"
+	srvLen     int
+	srvExt     = ".service"
+	srvSysPath = "/etc/systemd/system"
+
+	// Not sure which of these it's supposed to be...
+	// * ~/.local/share/systemd/user/watchdog.service
+	// * ~/.config/systemd/user/watchdog.service
+	// https://wiki.archlinux.org/index.php/Systemd/User
+	// This seems to work on Ubuntu
+	srvUserPath = ".config/systemd/user"
 )
 
 func init() {
 	srvLen = len(srvExt)
+}
+
+func start(system bool, home string, name string) error {
+	sys, user, err := getMatchingSrvs(home, name)
+	if nil != err {
+		return err
+	}
+
+	var service string
+	if system {
+		service, err = getOneSysSrv(sys, user, name)
+		if nil != err {
+			return err
+		}
+		service = filepath.Join(srvSysPath, service)
+	} else {
+		service, err = getOneUserSrv(home, sys, user, name)
+		if nil != err {
+			return err
+		}
+		service = filepath.Join(home, srvUserPath, service)
+	}
+
+	var cmds []Runnable
+	if system {
+		cmds = []Runnable{
+			Runnable{
+				Exec: "systemctl",
+				Args: []string{"daemon-reload"},
+				Must: false,
+			},
+			Runnable{
+				Exec: "systemctl",
+				Args: []string{"stop", name + ".service"},
+				Must: false,
+			},
+			Runnable{
+				Exec:     "systemctl",
+				Args:     []string{"start", name + ".service"},
+				Badwords: []string{"not found", "failed"},
+				Must:     true,
+			},
+		}
+	} else {
+		cmds = []Runnable{
+			Runnable{
+				Exec: "systemctl",
+				Args: []string{"--user", "daemon-reload"},
+				Must: false,
+			},
+			Runnable{
+				Exec: "systemctl",
+				Args: []string{"stop", "--user", name + ".service"},
+				Must: false,
+			},
+			Runnable{
+				Exec:     "systemctl",
+				Args:     []string{"start", "--user", name + ".service"},
+				Badwords: []string{"not found", "failed"},
+				Must:     true,
+			},
+		}
+	}
+
+	cmds = adjustPrivs(system, cmds)
+
+	fmt.Println()
+	for i := range cmds {
+		exe := cmds[i]
+		fmt.Println(exe.String())
+		err := exe.Run()
+		if nil != err {
+			return err
+		}
+	}
+	fmt.Println()
+
+	return nil
 }
 
 func install(c *service.Service) error {
@@ -33,17 +117,12 @@ func install(c *service.Service) error {
 	if "" == c.Group {
 		c.Group = c.User
 	}
-	serviceDir := srvSysPath
 
 	// Check paths first
-	serviceName := c.Name + ".service"
+	serviceDir := srvSysPath
 	if !c.System {
-		// Not sure which of these it's supposed to be...
-		// * ~/.local/share/systemd/user/watchdog.service
-		// * ~/.config/systemd/user/watchdog.service
-		// https://wiki.archlinux.org/index.php/Systemd/User
 		serviceDir = filepath.Join(c.Home, srvUserPath)
-		err := os.MkdirAll(filepath.Dir(serviceDir), 0755)
+		err := os.MkdirAll(serviceDir, 0755)
 		if nil != err {
 			return err
 		}
@@ -67,22 +146,27 @@ func install(c *service.Service) error {
 	}
 
 	// Write the file out
+	serviceName := c.Name + ".service"
 	servicePath := filepath.Join(serviceDir, serviceName)
 	if err := ioutil.WriteFile(servicePath, rw.Bytes(), 0644); err != nil {
-		return fmt.Errorf("ioutil.WriteFile error: %v", err)
+		return fmt.Errorf("Error writing %s: %v", servicePath, err)
 	}
 
-	// TODO template this as well?
-	userspace := ""
-	sudo := "sudo "
-	if !c.System {
-		userspace = "--user "
-		sudo = ""
+	// TODO --no-start
+	err = start(c.System, c.Home, c.Name)
+	if nil != err {
+		sudo := ""
+		// --user-unit rather than --user --unit for older systemd
+		unit := "--user-unit"
+		if c.System {
+			sudo = "sudo "
+			unit = "--unit"
+		}
+		fmt.Printf("If things don't go well you should be able to get additional logging from journalctl:\n")
+		fmt.Printf("\t%sjournalctl -xe %s %s.service\n", sudo, unit, c.Name)
+		return err
 	}
-	fmt.Printf("System service installed as '%s'.\n", servicePath)
-	fmt.Printf("Run the following to start '%s':\n", c.Name)
-	fmt.Printf("\t" + sudo + "systemctl " + userspace + "daemon-reload\n")
-	fmt.Printf("\t"+sudo+"systemctl "+userspace+"restart %s.service\n", c.Name)
-	fmt.Printf("\t"+sudo+"journalctl "+userspace+"-xefu %s\n", c.Name)
+
+	fmt.Printf("Added and started '%s' as a systemd service.\n", c.Name)
 	return nil
 }

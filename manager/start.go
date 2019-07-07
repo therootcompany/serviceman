@@ -45,34 +45,33 @@ func (x Runnable) Run() error {
 		}
 	}
 	if nil != err {
-		return fmt.Errorf("Failed to run %s %s\n%s\n", x.Exec, strings.Join(x.Args, " "), str)
+		var comment string
+		if len(x.Keywords) > 0 {
+			comment += "# output must match all of:\n"
+			comment += "# \t" + strings.Join(x.Keywords, "\n#\t") + "\n"
+		}
+		if len(x.Badwords) > 0 {
+			comment += "# output must not match any of:\n"
+			comment += "# \t" + strings.Join(x.Badwords, "\n#\t") + "\n"
+		}
+		return fmt.Errorf("Failed to run %s %s\n%s\n%s\n", x.Exec, strings.Join(x.Args, " "), str, comment)
 	}
 
 	return nil
 }
 
 func (x Runnable) String() string {
-	var comment string
 	var must = "true"
 
 	if x.Must {
 		must = "exit"
-		if len(x.Keywords) > 0 {
-			comment += "# output must match all of:\n"
-			comment += "\t" + strings.Join(x.Keywords, "#\t \n") + "\n"
-		}
-		if len(x.Badwords) > 0 {
-			comment += "# output must not match any of:\n"
-			comment += "\t" + strings.Join(x.Keywords, "#\t \n") + "\n"
-		}
 	}
 
 	return strings.TrimSpace(fmt.Sprintf(
-		"%s %s || %s\n%s",
+		"%s %s || %s\n",
 		x.Exec,
 		strings.Join(x.Args, " "),
 		must,
-		comment,
 	))
 }
 
@@ -202,4 +201,21 @@ func getOneUserSrv(home string, sys []string, user []string, name string) (strin
 	}
 
 	return service, nil
+}
+
+func adjustPrivs(system bool, cmds []Runnable) []Runnable {
+	if !system || isPrivileged() {
+		return cmds
+	}
+
+	sudos := cmds
+	cmds = []Runnable{}
+	for i := range sudos {
+		exe := sudos[i]
+		exe.Args = append([]string{exe.Exec}, exe.Args...)
+		exe.Exec = "sudo"
+		cmds = append(cmds, exe)
+	}
+
+	return cmds
 }

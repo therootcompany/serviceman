@@ -58,6 +58,8 @@ func start(system bool, home string, name string) error {
 		},
 	}
 
+	cmds = adjustPrivs(system, cmds)
+
 	fmt.Println()
 	for i := range cmds {
 		exe := cmds[i]
@@ -112,8 +114,7 @@ func install(c *service.Service) error {
 	plistName := c.ReverseDNS + ".plist"
 	plistPath := filepath.Join(plistDir, plistName)
 	if err := ioutil.WriteFile(plistPath, rw.Bytes(), 0644); err != nil {
-
-		return fmt.Errorf("ioutil.WriteFile error: %v", err)
+		return fmt.Errorf("Error writing %s: %v", plistPath, err)
 	}
 
 	// TODO --no-start
@@ -127,20 +128,4 @@ func install(c *service.Service) error {
 
 	fmt.Printf("Added and started '%s' as a launchctl service.\n", c.Name)
 	return nil
-
-	/*
-		fmt.Printf("Installed. To start '%s' run the following:\n", c.Name)
-		// TODO template config file
-		if "" != c.Home {
-			plistPath = strings.Replace(plistPath, c.Home, "~", 1)
-		}
-		sudo := ""
-		if c.System {
-			sudo = "sudo "
-		}
-		fmt.Printf("\t%slaunchctl load -w %s\n", sudo, plistPath)
-
-
-		return nil
-	*/
 }

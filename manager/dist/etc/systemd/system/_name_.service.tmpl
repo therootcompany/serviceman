@@ -12,18 +12,20 @@
 # sudo journalctl {{ if not .System -}} --user {{ end -}} -xefu {{ .Name }}
 
 [Unit]
-Description={{ .Title }} - {{ .Desc }}
+Description={{ .Title }} {{ if .Desc }}- {{ .Desc }}{{ end }}
+{{ if .URL -}}
 Documentation={{ .URL }}
+{{ end -}}
 {{ if .System -}}
 After=network-online.target
 Wants=network-online.target systemd-networkd-wait-online.service
-{{- end }}
 
+{{ end -}}
 [Service]
 # Restart on crash (bad signal), but not on 'clean' failure (error exit code)
 # Allow up to 3 restarts within 10 seconds
 # (it's unlikely that a user or properly-running script will do this)
-Restart=on-abnormal
+Restart=always
 StartLimitInterval=10
 StartLimitBurst=3
 
@@ -36,7 +38,7 @@ Group={{ .Group }}
 {{ if .Workdir -}}
 WorkingDirectory={{ .Workdir }}
 {{ end -}}
-ExecStart={{if .Interpreter }}{{ .Interpreter }} {{ end }}{{ .Exec }} {{- range $arg := .Argv }}{{ $arg }} {{- end }}
+ExecStart={{if .Interpreter }}{{ .Interpreter }} {{ end }}{{ .Exec }}{{ range $arg := .Argv }} {{ $arg }}{{ end }}
 ExecReload=/bin/kill -USR1 $MAINPID
 
 {{if .Production -}}

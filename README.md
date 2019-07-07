@@ -172,6 +172,7 @@ move serviceman.exe %userprofile%\bin\serviceman.exe
 **All Others**
 
 ```
+chmod a+x ./serviceman
 sudo mv ./serviceman /usr/local/bin/
 ```
 
@@ -364,9 +365,9 @@ Where `conf.json` looks something like
 
 ```json
 {
-	"title": "Demo",
-	"exec": "/Users/me/go-demo/demo",
-	"argv": ["--foo", "bar", "--baz", "qux"]
+  "title": "Demo",
+  "exec": "/Users/me/go-demo/demo",
+  "argv": ["--foo", "bar", "--baz", "qux"]
 }
 ```
 
@@ -380,10 +381,10 @@ names and relative paths.
 
 ```json
 {
-	"title": "Demo",
-	"interpreter": "node.exe",
-	"exec": "./bin/demo.js",
-	"argv": ["--foo", "bar", "--baz", "qux"]
+  "title": "Demo",
+  "interpreter": "node.exe",
+  "exec": "./bin/demo.js",
+  "argv": ["--foo", "bar", "--baz", "qux"]
 }
 ```
 
@@ -391,12 +392,12 @@ That's equivalent to this:
 
 ```json
 {
-	"title": "Demo",
+  "title": "Demo",
 
-	"name": "demo",
+  "name": "demo",
 
-	"exec": "node.exe",
-	"argv": ["./bin/demo.js", "--foo", "bar", "--baz", "qux"]
+  "exec": "node.exe",
+  "argv": ["./bin/demo.js", "--foo", "bar", "--baz", "qux"]
 }
 ```
 

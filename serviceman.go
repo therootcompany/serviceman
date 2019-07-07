@@ -126,15 +126,16 @@ func add() {
 	conf.Normalize(force)
 
 	//fmt.Printf("\n%#v\n\n", conf)
+	if conf.System && !manager.IsPrivileged() {
+		fmt.Fprintf(os.Stderr, "Warning: You may need to use 'sudo' to add %q as a privileged system service.\n", conf.Name)
+	}
 
 	err = manager.Install(conf)
 	if nil != err {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
-		fmt.Fprintf(os.Stderr, "Use 'sudo' to add service as a privileged system service.\n")
-		fmt.Fprintf(os.Stderr, "Use '--user' to add service as an user service.\n")
 	}
 
-	fmt.Printf("If all went well the logs should have been created at:\n\t%s\n", conf.Logdir)
+	printLogMessage(conf)
 	fmt.Println()
 }
 
