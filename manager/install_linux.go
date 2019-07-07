@@ -94,9 +94,10 @@ func start(system bool, home string, name string) error {
 	cmds = adjustPrivs(system, cmds)
 
 	fmt.Println()
+	fmt.Println("Starting systemd service unit...")
 	for i := range cmds {
 		exe := cmds[i]
-		fmt.Println(exe.String())
+		fmt.Println("\t" + exe.String())
 		err := exe.Run()
 		if nil != err {
 			return err
