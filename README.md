@@ -313,6 +313,14 @@ serviceman add dinglehopper -- --config /Users/me/dinglehopper/conf.json
 
 # Logging
 
+### Linux
+
+```bash
+sudo journalctl -xef --unit <NAME>
+```
+
+### Mac, Windows
+
 When you run `serviceman add` it will either give you an error or
 will print out the location where logs will be found.
 
@@ -323,7 +331,7 @@ By default it's one of these:
 ```
 
 ```txt
-/var/log/<NAME>/var/log/<NAME>.log
+/opt/<NAME>/var/log/<NAME>.log
 ```
 
 You set it with one of these:
