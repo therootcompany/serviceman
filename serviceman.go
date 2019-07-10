@@ -18,7 +18,7 @@ import (
 )
 
 var GitRev = "000000000"
-var GitVersion = "v0.3.1-pre+dirty"
+var GitVersion = "v0.3.2-pre+dirty"
 var GitTimestamp = time.Now().Format(time.RFC3339)
 
 func usage() {
