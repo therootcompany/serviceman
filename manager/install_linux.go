@@ -54,6 +54,12 @@ func start(conf *service.Service) error {
 			},
 			Runnable{
 				Exec:     "systemctl",
+				Args:     []string{"enable", name + ".service"},
+				Badwords: []string{"not found", "failed"},
+				Must:     true,
+			},
+			Runnable{
+				Exec:     "systemctl",
 				Args:     []string{"start", name + ".service"},
 				Badwords: []string{"not found", "failed"},
 				Must:     true,
