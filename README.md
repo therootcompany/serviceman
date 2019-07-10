@@ -51,7 +51,7 @@ And what that might look like:
 
 ```
 # Here the service is named "foo" implicitly
-# '--bar /baz' is passed as arguments to foo.exe
+# '--bar /baz' will be used for arguments to foo.exe in the service file
 serviceman add foo.exe -- --bar /baz
 ```
 
