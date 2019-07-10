@@ -9,57 +9,63 @@ Because debugging launchctl, systemd, etc absolutely sucks!
 
 ## Features
 
-- Unprivileged (User Mode) Services
-  - [x] Linux (`sytemctl --user`)
-  - [x] MacOS (`launchctl`)
-  - [x] Windows (`HKEY_CURRENT_USER/.../Run`)
-- Privileged (System) Services
-  - [x] Linux (`sudo sytemctl`)
-  - [x] MacOS (`sudo launchctl`)
-  - [ ] Windows (_not yet implemented_)
+-   Unprivileged (User Mode) Services
+    -   [x] Linux (`sytemctl --user`)
+    -   [x] MacOS (`launchctl`)
+    -   [x] Windows (`HKEY_CURRENT_USER/.../Run`)
+-   Privileged (System) Services
+    -   [x] Linux (`sudo sytemctl`)
+    -   [x] MacOS (`sudo launchctl`)
+    -   [ ] Windows (_not yet implemented_)
 
 # Table of Contents
 
-- Usage
-- Install
-- Examples
-  - compiled programs
-  - scripts
-  - bash
-  - node
-  - python
-  - ruby
-- Logging
-- Debugging
-- Windows
-- Building
-- Why
-- Legal
+-   Usage
+-   Install
+-   Examples
+    -   compiled programs
+    -   scripts
+    -   bash
+    -   node
+    -   python
+    -   ruby
+-   Logging
+-   Debugging
+-   Windows
+-   Building
+-   Why
+-   Legal
 
 # Usage
 
-The basic pattern of usage, and what that might look like:
+The basic pattern of usage:
 
 ```
 serviceman add [options] [interpreter] <service> -- [service options]
+serviceman start <service>
+serviceman stop <service>
+serviceman version
+```
+
+And what that might look like:
+
+```
+# Here the service is named "foo" implicitly
+# '--bar /baz' is passed as arguments to foo.exe
+serviceman add foo.exe -- --bar /baz
 ```
 
 ```
-serviceman add foo.exe
+# Here the service is named "foo-app" explicitly
+# 'node' will be found in the path
+# './index.js' will be resolved to a full path
+serviceman add --name "foo-app" node ./index.js
 ```
 
-```
-serviceman add --title "Foo App" node ./foo.js -- --bar
-```
-
-You can also view the help and the version:
+You can also view the help:
 
 ```
 serviceman add --help
-```
-
-```
-serviceman version
 ```
 
 # Install
@@ -336,9 +342,9 @@ By default it's one of these:
 
 You set it with one of these:
 
-- `--logdir <path>` (cli)
-- `"logdir": "<path>"` (json)
-- `Logdir: "<path>"` (go)
+-   `--logdir <path>` (cli)
+-   `"logdir": "<path>"` (json)
+-   `Logdir: "<path>"` (go)
 
 If anything about the logging sucks, tell me... unless they're your logs
 (which they probably are), in which case _you_ should fix them.
@@ -373,9 +379,9 @@ Where `conf.json` looks something like
 
 ```json
 {
-  "title": "Demo",
-  "exec": "/Users/me/go-demo/demo",
-  "argv": ["--foo", "bar", "--baz", "qux"]
+	"title": "Demo",
+	"exec": "/Users/me/go-demo/demo",
+	"argv": ["--foo", "bar", "--baz", "qux"]
 }
 ```
 
@@ -389,10 +395,10 @@ names and relative paths.
 
 ```json
 {
-  "title": "Demo",
-  "interpreter": "node.exe",
-  "exec": "./bin/demo.js",
-  "argv": ["--foo", "bar", "--baz", "qux"]
+	"title": "Demo",
+	"interpreter": "node.exe",
+	"exec": "./bin/demo.js",
+	"argv": ["--foo", "bar", "--baz", "qux"]
 }
 ```
 
@@ -400,12 +406,12 @@ That's equivalent to this:
 
 ```json
 {
-  "title": "Demo",
+	"title": "Demo",
 
-  "name": "demo",
+	"name": "demo",
 
-  "exec": "node.exe",
-  "argv": ["./bin/demo.js", "--foo", "bar", "--baz", "qux"]
+	"exec": "node.exe",
+	"argv": ["./bin/demo.js", "--foo", "bar", "--baz", "qux"]
 }
 ```
 
