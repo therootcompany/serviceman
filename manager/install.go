@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"git.rootprojects.org/root/go-serviceman/service"
 )
@@ -42,6 +43,14 @@ func Install(c *service.Service) error {
 	return nil
 }
 
+func Start(conf *service.Service) error {
+	return start(conf)
+}
+
+func Stop(conf *service.Service) error {
+	return stop(conf)
+}
+
 // IsPrivileged returns true if we suspect that the current user (or process) will be able
 // to write to system folders, bind to privileged ports, and otherwise
 // successfully run a system service.
@@ -56,4 +65,13 @@ func WhereIs(exe string) (string, error) {
 		return "", err
 	}
 	return filepath.Abs(filepath.ToSlash(exepath))
+}
+
+type ErrDaemonize struct {
+	DaemonArgs []string
+	error      string
+}
+
+func (e *ErrDaemonize) Error() string {
+	return e.error + "\nYou need to switch on ErrDaemonize, and use .DaemonArgs, which would run this:" + strings.Join(e.DaemonArgs, " ")
 }

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"git.rootprojects.org/root/go-serviceman/runner"
 	"git.rootprojects.org/root/go-serviceman/service"
 
 	"golang.org/x/sys/windows/registry"
@@ -67,6 +68,9 @@ func install(c *service.Service) error {
 	}
 	defer k.Close()
 
+	// Try to stop before trying to copy the file
+	_ = runner.Stop(c)
+
 	args, err := installServiceman(c)
 	if nil != err {
 		return err
@@ -104,22 +108,55 @@ func install(c *service.Service) error {
 	//fmt.Println(autorunKey, c.Title, regSZ)
 	k.SetStringValue(c.Title, regSZ)
 
-	return nil
+	// to return ErrDaemonize
+	return start(c)
+}
+
+func start(conf *service.Service) error {
+	args := getRunnerArgs(conf)
+	return &ErrDaemonize{
+		DaemonArgs: append(args, "--daemon"),
+		error:      "Not as much an error as a bad value...",
+	}
+	//return runner.Start(conf)
+}
+
+func stop(conf *service.Service) error {
+	return runner.Stop(conf)
+}
+
+func getRunnerArgs(c *service.Service) []string {
+	self := os.Args[0]
+	debug := ""
+	if strings.Contains(self, "debug.exe") {
+		debug = "debug."
+	}
+
+	smdir := `\opt\serviceman`
+	// TODO support service level services (which probably wouldn't need serviceman)
+	smdir = filepath.Join(c.Home, ".local", smdir)
+	// for now we'll scope the runner to the name of the application
+	smbin := filepath.Join(smdir, `bin\serviceman.`+debug+c.Name+`.exe`)
+
+	confpath := filepath.Join(smdir, `etc`)
+	conffile := filepath.Join(confpath, c.Name+`.json`)
+
+	return []string{
+		smbin,
+		"run",
+		"--config",
+		conffile,
+	}
 }
 
 // copies self to install path and returns config path
 func installServiceman(c *service.Service) ([]string, error) {
 	// TODO check version and upgrade or dismiss
 	self := os.Args[0]
-	debug := ""
-	if strings.Contains(self, "debug.exe") {
-		debug = "debug."
-	}
-	smdir := `\opt\serviceman`
-	// TODO support service level services (which probably wouldn't need serviceman)
-	smdir = filepath.Join(c.Home, ".local", smdir)
-	// for now we'll scope the runner to the name of the application
-	smbin := filepath.Join(smdir, `bin\serviceman.`+debug+c.Name+`.exe`)
+
+	args := getRunnerArgs(c)
+	smbin := args[0]
+	conffile := args[len(args)-1]
 
 	if smbin != self {
 		err := os.MkdirAll(filepath.Dir(smbin), 0755)
@@ -141,21 +178,14 @@ func installServiceman(c *service.Service) ([]string, error) {
 		// this should be impossible, so we'll just panic
 		panic(err)
 	}
-	confpath := filepath.Join(smdir, `etc`)
-	err = os.MkdirAll(confpath, 0755)
+	err = os.MkdirAll(filepath.Dir(conffile), 0755)
 	if nil != err {
 		return nil, err
 	}
-	conffile := filepath.Join(confpath, c.Name+`.json`)
 	err = ioutil.WriteFile(conffile, b, 0640)
 	if nil != err {
 		return nil, err
 	}
 
-	return []string{
-		smbin,
-		"run",
-		"--config",
-		conffile,
-	}, nil
+	return args, nil
 }

@@ -22,8 +22,12 @@ var GitVersion = "v0.0.0"
 var GitTimestamp = time.Now().Format(time.RFC3339)
 
 func usage() {
-	fmt.Println("Usage: serviceman add ./foo-app -- --foo-arg")
-	fmt.Println("Usage: serviceman run --config ./foo-app.json")
+	fmt.Println("Usage:")
+	fmt.Println("\tserviceman <command> --help")
+	fmt.Println("\tserviceman add ./foo-app -- --foo-arg")
+	fmt.Println("\tserviceman run --config ./foo-app.json")
+	fmt.Println("\tserviceman start <name>")
+	fmt.Println("\tserviceman stop <name>")
 }
 
 func main() {
@@ -38,10 +42,14 @@ func main() {
 	switch top {
 	case "version":
 		fmt.Println(GitVersion, GitTimestamp, GitRev)
-	case "add":
-		add()
 	case "run":
 		run()
+	case "add":
+		add()
+	case "start":
+		start()
+	case "stop":
+		stop()
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown argument %s\n", top)
 		usage()
@@ -106,7 +114,7 @@ func add() {
 
 	execpath, err := manager.WhereIs(args[0])
 	if nil != err {
-		fmt.Fprintf(os.Stderr, "Error: '%s' could not be found.\n", args[0])
+		fmt.Fprintf(os.Stderr, "Error: '%s' could not be found in PATH or working directory.\n", args[0])
 		if !force {
 			os.Exit(3)
 			return
@@ -131,12 +139,99 @@ func add() {
 	}
 
 	err = manager.Install(conf)
-	if nil != err {
+	switch e := err.(type) {
+	case nil:
+		// do nothing
+	case *manager.ErrDaemonize:
+		runAsDaemon(e.DaemonArgs[0], e.DaemonArgs[1:]...)
+	default:
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 	}
 
 	printLogMessage(conf)
 	fmt.Println()
+}
+
+func start() {
+	forUser := false
+	forSystem := false
+	flag.BoolVar(&forSystem, "system", false, "attempt to add system service as an unprivileged/unelevated user")
+	flag.BoolVar(&forUser, "user", false, "add user space / user mode service even when admin/root/sudo/elevated")
+	flag.Parse()
+
+	args := flag.Args()
+	if 1 != len(args) {
+		fmt.Println("Usage: serviceman start <name>")
+		os.Exit(1)
+	}
+
+	if forUser && forSystem {
+		fmt.Println("Pfff! You can't --user AND --system! What are you trying to pull?")
+		os.Exit(1)
+		return
+	}
+
+	conf := &service.Service{
+		Name:    args[0],
+		Restart: false,
+	}
+	if forUser {
+		conf.System = false
+	} else if forSystem {
+		conf.System = true
+	} else {
+		conf.System = manager.IsPrivileged()
+	}
+	conf.NormalizeWithoutPath()
+
+	err := manager.Start(conf)
+	switch e := err.(type) {
+	case nil:
+		// do nothing
+	case *manager.ErrDaemonize:
+		runAsDaemon(e.DaemonArgs[0], e.DaemonArgs[1:]...)
+	default:
+		fmt.Println(err)
+		os.Exit(127)
+	}
+}
+
+func stop() {
+	forUser := false
+	forSystem := false
+	flag.BoolVar(&forSystem, "system", false, "attempt to add system service as an unprivileged/unelevated user")
+	flag.BoolVar(&forUser, "user", false, "add user space / user mode service even when admin/root/sudo/elevated")
+	flag.Parse()
+
+	args := flag.Args()
+	if 1 != len(args) {
+		fmt.Println("Usage: serviceman stop <name>")
+		os.Exit(1)
+	}
+
+	if forUser && forSystem {
+		fmt.Println("Pfff! You can't --user AND --system! What are you trying to pull?")
+		os.Exit(1)
+		return
+	}
+
+	conf := &service.Service{
+		Name:    args[0],
+		Restart: false,
+	}
+	if forUser {
+		conf.System = false
+	} else if forSystem {
+		conf.System = true
+	} else {
+		conf.System = manager.IsPrivileged()
+	}
+	conf.NormalizeWithoutPath()
+
+	if err := manager.Stop(conf); nil != err {
+		fmt.Println(err)
+		os.Exit(127)
+	}
 }
 
 func run() {
@@ -183,7 +278,8 @@ func run() {
 		os.Exit(400)
 	}
 
-	s.Normalize(false)
+	force := false
+	s.Normalize(force)
 	fmt.Printf("All output will be directed to the logs at:\n\t%s\n", s.Logdir)
 	err = os.MkdirAll(s.Logdir, 0755)
 	if nil != err {
@@ -193,11 +289,17 @@ func run() {
 
 	if !daemonize {
 		//fmt.Fprintf(os.Stdout, "Running %s %s %s\n", s.Interpreter, s.Exec, strings.Join(s.Argv, " "))
-		runner.Run(s)
+		if err := runner.Start(s); nil != err {
+			fmt.Println("Error:", err)
+		}
 		return
 	}
 
-	cmd := exec.Command(os.Args[0], "run", "--config", confpath)
+	runAsDaemon(os.Args[0], "run", "--config", confpath)
+}
+
+func runAsDaemon(bin string, args ...string) {
+	cmd := exec.Command(bin, args...)
 	// for debugging
 	/*
 		out, err := cmd.CombinedOutput()
@@ -207,7 +309,7 @@ func run() {
 		fmt.Println(string(out))
 	*/
 
-	err = cmd.Start()
+	err := cmd.Start()
 	if nil != err {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(500)

@@ -24,23 +24,14 @@ func init() {
 	srvLen = len(srvExt)
 }
 
-func start(system bool, home string, name string) error {
-	sys, user, err := getMatchingSrvs(home, name)
+func start(conf *service.Service) error {
+	system := conf.System
+	home := conf.Home
+	rdns := conf.ReverseDNS
+
+	service, err := getService(system, home, rdns)
 	if nil != err {
 		return err
-	}
-
-	var service string
-	if system {
-		service, err = getOneSysSrv(sys, user, name)
-		if nil != err {
-			return err
-		}
-	} else {
-		service, err = getOneUserSrv(home, sys, user, name)
-		if nil != err {
-			return err
-		}
 	}
 
 	cmds := []Runnable{
@@ -60,7 +51,51 @@ func start(system bool, home string, name string) error {
 	cmds = adjustPrivs(system, cmds)
 
 	fmt.Println()
-	fmt.Println("Starting launchd service...")
+	typ := "USER"
+	if system {
+		typ = "SYSTEM"
+	}
+	fmt.Printf("Starting launchd %s service...\n", typ)
+	for i := range cmds {
+		exe := cmds[i]
+		fmt.Println("\t" + exe.String())
+		err := exe.Run()
+		if nil != err {
+			return err
+		}
+	}
+	fmt.Println()
+
+	return nil
+}
+
+func stop(conf *service.Service) error {
+	system := conf.System
+	home := conf.Home
+	rdns := conf.ReverseDNS
+
+	service, err := getService(system, home, rdns)
+	if nil != err {
+		return err
+	}
+
+	cmds := []Runnable{
+		Runnable{
+			Exec:     "launchctl",
+			Args:     []string{"unload", service},
+			Must:     false,
+			Badwords: []string{"No such file or directory", "Cound not find specified service"},
+		},
+	}
+
+	cmds = adjustPrivs(system, cmds)
+
+	fmt.Println()
+	typ := "USER"
+	if system {
+		typ = "SYSTEM"
+	}
+	fmt.Printf("Stopping launchd %s service...\n", typ)
 	for i := range cmds {
 		exe := cmds[i]
 		fmt.Println("\t" + exe.String())
@@ -118,7 +153,7 @@ func install(c *service.Service) error {
 	}
 
 	// TODO --no-start
-	err = start(c.System, c.Home, c.ReverseDNS)
+	err = start(c)
 	if nil != err {
 		fmt.Printf("If things don't go well you should be able to get additional logging from launchctl:\n")
 		fmt.Printf("\tsudo launchctl log level debug\n")

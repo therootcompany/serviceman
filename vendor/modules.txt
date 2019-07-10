@@ -32,6 +32,8 @@ github.com/mattn/go-colorable
 github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.3
 github.com/mattn/go-runewidth
+# github.com/mitchellh/go-ps v0.0.0-20170309133038-4fdf99ab2936
+github.com/mitchellh/go-ps
 # github.com/mitchellh/go-wordwrap v1.0.0
 github.com/mitchellh/go-wordwrap
 # github.com/nsf/termbox-go v0.0.0-20180819125858-b66b20ab708e

@@ -71,7 +71,7 @@ type Service struct {
 	MultiuserProtection bool              `json:"multiuser_protection,omitempty"`
 }
 
-func (s *Service) Normalize(force bool) {
+func (s *Service) NormalizeWithoutPath() {
 	if "" == s.Name {
 		ext := filepath.Ext(s.Exec)
 		base := filepath.Base(s.Exec[:len(s.Exec)-len(ext)])
@@ -93,11 +93,16 @@ func (s *Service) Normalize(force bool) {
 			os.Exit(4)
 			return
 		}
+		s.Home = home
 		s.Local = filepath.Join(home, ".local")
 		s.Logdir = filepath.Join(home, ".local", "share", s.Name, "var", "log")
 	} else {
 		s.Logdir = "/var/log/" + s.Name
 	}
+}
+
+func (s *Service) Normalize(force bool) {
+	s.NormalizeWithoutPath()
 
 	// Check to see if Exec exists
 	//   /whatever => must exist exactly

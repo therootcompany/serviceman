@@ -8,6 +8,28 @@ import (
 	"strings"
 )
 
+func getService(system bool, home string, name string) (string, error) {
+	sys, user, err := getMatchingSrvs(home, name)
+	if nil != err {
+		return "", err
+	}
+
+	var service string
+	if system {
+		service, err = getOneSysSrv(sys, user, name)
+		if nil != err {
+			return "", err
+		}
+	} else {
+		service, err = getOneUserSrv(home, sys, user, name)
+		if nil != err {
+			return "", err
+		}
+	}
+
+	return service, nil
+}
+
 // Runnable defines a command to run, along with its arguments,
 // and whether or not failing to exit successfully matters.
 // It also defines whether certains words must exist (or not exist)

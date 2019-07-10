@@ -29,23 +29,14 @@ func init() {
 	srvLen = len(srvExt)
 }
 
-func start(system bool, home string, name string) error {
-	sys, user, err := getMatchingSrvs(home, name)
+func start(conf *service.Service) error {
+	system := conf.System
+	home := conf.Home
+	name := conf.ReverseDNS
+
+	_, err := getService(system, home, name)
 	if nil != err {
 		return err
-	}
-
-	// var service string
-	if system {
-		_, err = getOneSysSrv(sys, user, name)
-		if nil != err {
-			return err
-		}
-	} else {
-		_, err = getOneUserSrv(home, sys, user, name)
-		if nil != err {
-			return err
-		}
 	}
 
 	var cmds []Runnable
@@ -92,7 +83,64 @@ func start(system bool, home string, name string) error {
 	cmds = adjustPrivs(system, cmds)
 
 	fmt.Println()
-	fmt.Println("Starting systemd service unit...")
+	typ := "USER MODE"
+	if system {
+		typ = "SYSTEM"
+	}
+	fmt.Printf("Starting systemd %s service unit...\n", typ)
+	for i := range cmds {
+		exe := cmds[i]
+		fmt.Println("\t" + exe.String())
+		err := exe.Run()
+		if nil != err {
+			return err
+		}
+	}
+	fmt.Println()
+
+	return nil
+}
+
+func stop(conf *service.Service) error {
+	system := conf.System
+	home := conf.Home
+	name := conf.ReverseDNS
+
+	_, err := getService(system, home, name)
+	if nil != err {
+		return err
+	}
+
+	var cmds []Runnable
+	badwords := []string{"Failed to stop"}
+	if system {
+		cmds = []Runnable{
+			Runnable{
+				Exec:     "systemctl",
+				Args:     []string{"stop", name + ".service"},
+				Must:     true,
+				Badwords: badwords,
+			},
+		}
+	} else {
+		cmds = []Runnable{
+			Runnable{
+				Exec:     "systemctl",
+				Args:     []string{"stop", "--user", name + ".service"},
+				Must:     true,
+				Badwords: badwords,
+			},
+		}
+	}
+
+	cmds = adjustPrivs(system, cmds)
+
+	fmt.Println()
+	typ := "USER MODE"
+	if system {
+		typ = "SYSTEM"
+	}
+	fmt.Printf("Stopping systemd %s service...\n", typ)
 	for i := range cmds {
 		exe := cmds[i]
 		fmt.Println("\t" + exe.String())
@@ -152,7 +200,7 @@ func install(c *service.Service) error {
 	}
 
 	// TODO --no-start
-	err = start(c.System, c.Home, c.Name)
+	err = start(c)
 	if nil != err {
 		sudo := ""
 		// --user-unit rather than --user --unit for older systemd
