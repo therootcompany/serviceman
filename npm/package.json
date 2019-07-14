@@ -1,10 +1,10 @@
 {
 	"name": "serviceman",
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"description": "A cross-platform service manager",
 	"main": "index.js",
 	"scripts": {
-		"postinstall": "bin/install-serviceman.js",
+		"postinstall": "scripts/fetch-serviceman.js",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"repository": {
