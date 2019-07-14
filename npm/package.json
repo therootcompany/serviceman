@@ -1,0 +1,30 @@
+{
+	"name": "serviceman",
+	"version": "0.5.0",
+	"description": "A cross-platform service manager",
+	"main": "index.js",
+	"scripts": {
+		"postinstall": "bin/install-serviceman.js",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://git.rootprojects.org/root/serviceman.git"
+	},
+	"keywords": [
+		"launchd",
+		"systemd",
+		"winsvc",
+		"launchctl",
+		"systemctl",
+		"HKEY_CURRENT_USER",
+		"HKCU",
+		"Run"
+	],
+	"author": "AJ ONeal <coolaj86@gmail.com> (https://coolaj86.com/)",
+	"license": "MPL-2.0",
+	"dependencies": {
+		"@root/mkdirp": "^1.0.0",
+		"@root/request": "^1.3.11"
+	}
+}
