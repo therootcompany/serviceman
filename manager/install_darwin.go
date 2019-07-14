@@ -50,12 +50,11 @@ func start(conf *service.Service) error {
 
 	cmds = adjustPrivs(system, cmds)
 
-	fmt.Println()
 	typ := "USER"
 	if system {
 		typ = "SYSTEM"
 	}
-	fmt.Printf("Starting launchd %s service...\n", typ)
+	fmt.Printf("Starting launchd %s service...\n\n", typ)
 	for i := range cmds {
 		exe := cmds[i]
 		fmt.Println("\t" + exe.String())
@@ -109,11 +108,32 @@ func stop(conf *service.Service) error {
 	return nil
 }
 
-func install(c *service.Service) error {
+func Render(c *service.Service) ([]byte, error) {
+	// Create service file from template
+	b, err := static.ReadFile("dist/Library/LaunchDaemons/_rdns_.plist.tmpl")
+	if err != nil {
+		return nil, err
+	}
+	s := string(b)
+	rw := &bytes.Buffer{}
+	// not sure what the template name does, but whatever
+	tmpl, err := template.New("service").Parse(s)
+	if err != nil {
+		return nil, err
+	}
+	err = tmpl.Execute(rw, c)
+	if nil != err {
+		return nil, err
+	}
+
+	return rw.Bytes(), nil
+}
+
+func install(c *service.Service) (string, error) {
 	// Darwin-specific config options
 	if c.PrivilegedPorts {
 		if !c.System {
-			return fmt.Errorf("You must use root-owned LaunchDaemons (not user-owned LaunchAgents) to use priveleged ports on OS X")
+			return "", fmt.Errorf("You must use root-owned LaunchDaemons (not user-owned LaunchAgents) to use priveleged ports on OS X")
 		}
 	}
 	plistDir := srvSysPath
@@ -124,32 +144,20 @@ func install(c *service.Service) error {
 	// Check paths first
 	err := os.MkdirAll(filepath.Dir(plistDir), 0755)
 	if nil != err {
-		return err
+		return "", err
 	}
 
-	// Create service file from template
-	b, err := static.ReadFile("dist/Library/LaunchDaemons/_rdns_.plist.tmpl")
-	if err != nil {
-		return err
-	}
-	s := string(b)
-	rw := &bytes.Buffer{}
-	// not sure what the template name does, but whatever
-	tmpl, err := template.New("service").Parse(s)
-	if err != nil {
-		return err
-	}
-	err = tmpl.Execute(rw, c)
+	b, err := Render(c)
 	if nil != err {
-		return err
+		return "", err
 	}
 
 	// Write the file out
 	// TODO rdns
 	plistName := c.ReverseDNS + ".plist"
 	plistPath := filepath.Join(plistDir, plistName)
-	if err := ioutil.WriteFile(plistPath, rw.Bytes(), 0644); err != nil {
-		return fmt.Errorf("Error writing %s: %v", plistPath, err)
+	if err := ioutil.WriteFile(plistPath, b, 0644); err != nil {
+		return "", fmt.Errorf("Error writing %s: %v", plistPath, err)
 	}
 
 	// TODO --no-start
@@ -158,9 +166,8 @@ func install(c *service.Service) error {
 		fmt.Printf("If things don't go well you should be able to get additional logging from launchctl:\n")
 		fmt.Printf("\tsudo launchctl log level debug\n")
 		fmt.Printf("\ttail -f /var/log/system.log\n")
-		return err
+		return "", err
 	}
 
-	fmt.Printf("Added and started '%s' as a launchctl service.\n", c.Name)
-	return nil
+	return "launchd", nil
 }

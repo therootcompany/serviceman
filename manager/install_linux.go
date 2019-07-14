@@ -88,12 +88,11 @@ func start(conf *service.Service) error {
 
 	cmds = adjustPrivs(system, cmds)
 
-	fmt.Println()
 	typ := "USER MODE"
 	if system {
 		typ = "SYSTEM"
 	}
-	fmt.Printf("Starting systemd %s service unit...\n", typ)
+	fmt.Printf("Starting systemd %s service unit...\n\n", typ)
 	for i := range cmds {
 		exe := cmds[i]
 		fmt.Println("\t" + exe.String())
@@ -160,7 +159,28 @@ func stop(conf *service.Service) error {
 	return nil
 }
 
-func install(c *service.Service) error {
+func Render(c *service.Service) ([]byte, error) {
+	// Create service file from template
+	b, err := static.ReadFile("dist/etc/systemd/system/_name_.service.tmpl")
+	if err != nil {
+		return nil, err
+	}
+	s := string(b)
+	rw := &bytes.Buffer{}
+	// not sure what the template name does, but whatever
+	tmpl, err := template.New("service").Parse(s)
+	if err != nil {
+		return nil, err
+	}
+	err = tmpl.Execute(rw, c)
+	if nil != err {
+		return nil, err
+	}
+
+	return rw.Bytes(), nil
+}
+
+func install(c *service.Service) (string, error) {
 	// Linux-specific config options
 	if c.System {
 		if "" == c.User {
@@ -177,32 +197,20 @@ func install(c *service.Service) error {
 		serviceDir = filepath.Join(c.Home, srvUserPath)
 		err := os.MkdirAll(serviceDir, 0755)
 		if nil != err {
-			return err
+			return "", err
 		}
 	}
 
-	// Create service file from template
-	b, err := static.ReadFile("dist/etc/systemd/system/_name_.service.tmpl")
-	if err != nil {
-		return err
-	}
-	s := string(b)
-	rw := &bytes.Buffer{}
-	// not sure what the template name does, but whatever
-	tmpl, err := template.New("service").Parse(s)
-	if err != nil {
-		return err
-	}
-	err = tmpl.Execute(rw, c)
+	b, err := Render(c)
 	if nil != err {
-		return err
+		return "", err
 	}
 
 	// Write the file out
 	serviceName := c.Name + ".service"
 	servicePath := filepath.Join(serviceDir, serviceName)
-	if err := ioutil.WriteFile(servicePath, rw.Bytes(), 0644); err != nil {
-		return fmt.Errorf("Error writing %s: %v", servicePath, err)
+	if err := ioutil.WriteFile(servicePath, b, 0644); err != nil {
+		return "", fmt.Errorf("Error writing %s: %v", servicePath, err)
 	}
 
 	// TODO --no-start
@@ -217,9 +225,8 @@ func install(c *service.Service) error {
 		}
 		fmt.Printf("If things don't go well you should be able to get additional logging from journalctl:\n")
 		fmt.Printf("\t%sjournalctl -xe %s %s.service\n", sudo, unit, c.Name)
-		return err
+		return "", err
 	}
 
-	fmt.Printf("Added and started '%s' as a systemd service.\n", c.Name)
-	return nil
+	return "systemd", nil
 }

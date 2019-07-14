@@ -116,7 +116,7 @@ func (s *Service) Normalize(force bool) {
 			_, err := os.Stat(optpath)
 			if nil == err {
 				bad = false
-				fmt.Fprintf(os.Stderr, "Using '%s' for '%s'\n", optpath, s.Exec)
+				//fmt.Fprintf(os.Stderr, "Using '%s' for '%s'\n", optpath, s.Exec)
 				s.Exec = optpath
 			}
 		}

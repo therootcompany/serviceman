@@ -9,11 +9,11 @@ Because debugging launchctl, systemd, etc absolutely sucks!
 
 ## Features
 
--   Unprivileged (User Mode) Services
+-   Unprivileged (User Mode) Services with `--user` (_Default_)
     -   [x] Linux (`sytemctl --user`)
     -   [x] MacOS (`launchctl`)
     -   [x] Windows (`HKEY_CURRENT_USER/.../Run`)
--   Privileged (System) Services
+-   Privileged (System) Services with `--system` (_Default_ for `root`)
     -   [x] Linux (`sudo sytemctl`)
     -   [x] MacOS (`sudo launchctl`)
     -   [ ] Windows (_not yet implemented_)
@@ -40,26 +40,17 @@ Because debugging launchctl, systemd, etc absolutely sucks!
 
 The basic pattern of usage:
 
-```
-serviceman add [options] [interpreter] <service> -- [service options]
-serviceman start <service>
-serviceman stop <service>
+```bash
+sudo serviceman add --name "foobar" [options] [interpreter] <service> [--] [service options]
+sudo serviceman start <service>
+sudo serviceman stop <service>
 serviceman version
 ```
 
 And what that might look like:
 
-```
-# Here the service is named "foo" implicitly
-# '--bar /baz' will be used for arguments to foo.exe in the service file
-serviceman add foo.exe -- --bar /baz
-```
-
-```
-# Here the service is named "foo-app" explicitly
-# 'node' will be found in the path
-# './index.js' will be resolved to a full path
-serviceman add --name "foo-app" node ./index.js
+```bash
+sudo serviceman add --name "foo" foo.exe -c ./config.json
 ```
 
 You can also view the help:
@@ -67,6 +58,14 @@ You can also view the help:
 ```
 serviceman add --help
 ```
+
+# System Services VS User Mode Services
+
+User services start **on login**.
+
+System services start **on boot**.
+
+The **default** is to register a _user_ services. To register a _system_ service, use `sudo` or run as `root`.
 
 # Install
 
@@ -171,8 +170,8 @@ curl https://rootprojects.org/serviceman/dist/linux/armv5/serviceman -o servicem
 
 ```
 mkdir %userprofile%\bin
-reg add HKEY_CURRENT_USER\Environment /v PATH /d "%PATH%;%userprofile%\bin"
 move serviceman.exe %userprofile%\bin\serviceman.exe
+reg add HKEY_CURRENT_USER\Environment /v PATH /d "%PATH%;%userprofile%\bin"
 ```
 
 **All Others**
@@ -184,43 +183,100 @@ sudo mv ./serviceman /usr/local/bin/
 
 # Examples
 
-> **serviceman add** &lt;program> **--** &lt;program options>
+```bash
+sudo serviceman add --name <name> <program> [options] [--] [raw options]
+
+# Example
+sudo serviceman add --name "gizmo" gizmo --foo bar/baz
+```
+
+Anything that looks like file or directory will be **resolved to its absolute path**:
+
+```bash
+# Example of path resolution
+gizmo --foo /User/me/gizmo/bar/baz
+```
+
+Use `--` to prevent this behavior:
+
+```bash
+# Complex Example
+sudo serviceman add --name "gizmo" gizmo -c ./config.ini -- --separator .
+```
+
+For native **Windows** programs that use `/` for flags, you'll need to resolve some paths yourself:
+
+```bash
+# Windows Example
+serviceman add --name "gizmo" gizmo.exe .\input.txt -- /c \User\me\gizmo\config.ini /q /s .
+```
+
+In this case `./config.ini` would still be resolved (before `--`), but `.` would not (after `--`)
 
 <details>
 <summary>Compiled Programs</summary>
 
 Normally you might your program somewhat like this:
 
-```
-dinglehopper --port 8421
+```bash
+gizmo run --port 8421 --config envs/prod.ini
 ```
 
 Adding a service for that program with `serviceman` would look like this:
 
-> **serviceman add** dinglehopper **--** --port 8421
+```bash
+sudo serviceman add --name "gizmo" gizmo run --port 8421 --config envs/prod.ini
+```
 
-serviceman will find dinglehopper in your PATH.
+serviceman will find `gizmo` in your PATH and resolve `envs/prod.ini` to its absolute path.
 
 </details>
 
 <details>
 <summary>Using with scripts</summary>
 
-Although your text script may be executable, you'll need to specify the interpreter
-in order for `serviceman` to configure the service correctly.
-
-For example, if you had a bash script that you normally ran like this:
-
-```
+```bash
 ./snarfblat.sh --port 8421
 ```
 
-You'd create a system service for it like this:
+Although your text script may be executable, you'll need to specify the interpreter
+in order for `serviceman` to configure the service correctly.
 
-> serviceman add **bash** ./snarfblat.sh **--** --port 8421
+This can be done in two ways:
 
-`serviceman` will resolve `./snarfblat.sh` correctly because it comes
-before the **--**.
+1. Put a **hashbang** in your script, such as `#!/bin/bash`.
+2. Prepend the **interpreter** explicitly to your command, such as `bash ./dinglehopper.sh`.
+
+For example, suppose you had a script like this:
+
+`iamok.sh`:
+
+```bash
+while true; do
+  sleep 1; echo "Still Alive, Still Alive!"
+done
+```
+
+Normally you would run the script like this:
+
+```bash
+./imok.sh
+```
+
+So you'd either need to modify the script to include a hashbang:
+
+```bash
+#!/usr/bin/env bash
+while true; do
+  sleep 1; echo "I'm Ok!"
+done
+```
+
+Or you'd need to prepend it with `bash` when creating a service for it:
+
+```bash
+sudo serviceman add --name "imok" bash ./imok.sh
+```
 
 **Background Information**
 
@@ -244,6 +300,8 @@ like this:
 #!/usr/local/bin/node --harmony --inspect
 ```
 
+Serviceman understands all 3 of those approaches.
+
 </details>
 
 <details>
@@ -252,14 +310,37 @@ like this:
 If normally you run your node script something like this:
 
 ```bash
-node ./demo.js --foo bar --baz
+pushd ~/my-node-project/
+npm start
 ```
 
 Then you would add it as a system service like this:
 
-> **serviceman add** node ./demo.js **--** --foo bar --baz
+```bash
+sudo serviceman add npm start
+```
 
-It is important that you specify `node ./demo.js` and not just `./demo.js`
+If normally you run your node script something like this:
+
+```bash
+pushd ~/my-node-project/
+node ./serve.js --foo bar --baz
+```
+
+Then you would add it as a system service like this:
+
+```bash
+sudo serviceman add node ./serve.js --foo bar --baz
+```
+
+It's important that any paths start with `./` and have the `.js`
+so that serviceman knows to resolve the full path.
+
+```bash
+# Bad Examples
+sudo serviceman add node ./demo # Wouldn't work for 'demo.js' - not a real filename
+sudo serviceman add node demo   # Wouldn't work for './demo/' - doesn't look like a directory
+```
 
 See **Using with scripts** for more detailed information.
 
@@ -271,14 +352,15 @@ See **Using with scripts** for more detailed information.
 If normally you run your python script something like this:
 
 ```bash
-python ./demo.py --foo bar --baz
+pushd ~/my-python-project/
+python ./serve.py --config ./config.ini
 ```
 
 Then you would add it as a system service like this:
 
-> **serviceman add** python ./demo.py **--** --foo bar --baz
-
-It is important that you specify `python ./demo.py` and not just `./demo.py`
+```bash
+sudo serviceman add python ./serve.py --config ./config.ini
+```
 
 See **Using with scripts** for more detailed information.
 
@@ -290,31 +372,32 @@ See **Using with scripts** for more detailed information.
 If normally you run your ruby script something like this:
 
 ```bash
-ruby ./demo.rb --foo bar --baz
+pushd ~/my-ruby-project/
+ruby ./serve.rb --config ./config.yaml
 ```
 
 Then you would add it as a system service like this:
 
-> **serviceman add** ruby ./demo.rb **--** --foo bar --baz
-
-It is important that you specify `ruby ./demo.rb` and not just `./demo.rb`
+```bash
+sudo serviceman add ruby ./serve.rb --config ./config.yaml
+```
 
 See **Using with scripts** for more detailed information.
 
 </details>
 
-## Relative vs Absolute Paths
+## Hints
 
-Although serviceman can expand the executable's path,
-if you have any arguments with relative paths
-you should switch to using absolute paths.
-
-```
-dinglehopper --config ./conf.json
-```
+-   If something goes wrong, read the output **completely** - it'll probably be helpful
+-   Run `serviceman` from your **project directory**, just as you would run it normally
+    -   Otherwise specify `--name <service-name>` and `--workdir <project directory>`
+-   Use `--` in front of arguments that should not be resolved as paths
+    -   This also holds true if you need `--` as an argument, such as `-- --foo -- --bar`
 
 ```
-serviceman add dinglehopper -- --config /Users/me/dinglehopper/conf.json
+# Example of a / that isn't a path
+# (it needs to be escaped with --)
+sudo serviceman add dinglehopper config/prod -- --category color/blue
 ```
 
 # Logging
@@ -323,6 +406,7 @@ serviceman add dinglehopper -- --config /Users/me/dinglehopper/conf.json
 
 ```bash
 sudo journalctl -xef --unit <NAME>
+sudo journalctl -xef --user-unit <NAME>
 ```
 
 ### Mac, Windows
@@ -353,6 +437,9 @@ That said, my goal is that it shouldn't take an IT genius to interpret
 why your app failed to start.
 
 # Debugging
+
+-   `serviceman add --dryrun <normal options>`
+-   `serviceman run --config <special config>`
 
 One of the most irritating problems with all of these launchers is that they're
 terrible to debug - it's often difficult to find the logs, and nearly impossible

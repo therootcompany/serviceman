@@ -7,5 +7,5 @@ import (
 )
 
 func printLogMessage(conf *service.Service) {
-	fmt.Printf("If all went well the logs should have been created at:\n\t%s\n", conf.Logdir)
+	fmt.Printf("If all went well the logs should have been created at:\n\n\t%s\n", conf.Logdir)
 }

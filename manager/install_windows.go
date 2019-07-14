@@ -30,7 +30,7 @@ func init() {
 
 // TODO system service requires elevated privileges
 // See https://coolaj86.com/articles/golang-and-windows-and-admins-oh-my/
-func install(c *service.Service) error {
+func install(c *service.Service) (string, error) {
 	/*
 		// LEAVE THIS DOCUMENTATION HERE
 		reg.exe
@@ -73,7 +73,7 @@ func install(c *service.Service) error {
 
 	args, err := installServiceman(c)
 	if nil != err {
-		return err
+		return "", err
 	}
 
 	/*
@@ -100,7 +100,7 @@ func install(c *service.Service) error {
 
 	regSZ := fmt.Sprintf(`"%s" %s`, args[0], strings.Join(args[1:], " "))
 	if len(regSZ) > 260 {
-		return fmt.Errorf("data value is too long for registry entry")
+		return "", fmt.Errorf("data value is too long for registry entry")
 	}
 	// In order for a windows gui program to not show a console,
 	// it has to not output any messages?
@@ -108,17 +108,22 @@ func install(c *service.Service) error {
 	//fmt.Println(autorunKey, c.Title, regSZ)
 	k.SetStringValue(c.Title, regSZ)
 
-	// to return ErrDaemonize
-	return start(c)
+	err = start(c)
+	return "serviceman", err
+}
+
+func Render(c *service.Service) ([]byte, error) {
+	b, err := json.Marshal(c)
+	if nil != err {
+		return nil, err
+	}
+	return b, nil
 }
 
 func start(conf *service.Service) error {
 	args := getRunnerArgs(conf)
-	return &ErrDaemonize{
-		DaemonArgs: append(args, "--daemon"),
-		error:      "Not as much an error as a bad value...",
-	}
-	//return runner.Start(conf)
+	args = append(args, "--daemon")
+	return Run(args[0], args[1:]...)
 }
 
 func stop(conf *service.Service) error {
@@ -173,7 +178,7 @@ func installServiceman(c *service.Service) ([]string, error) {
 		}
 	}
 
-	b, err := json.Marshal(c)
+	b, err := Render(c)
 	if nil != err {
 		// this should be impossible, so we'll just panic
 		panic(err)

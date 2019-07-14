@@ -14,7 +14,7 @@ import (
 
 // Install will do a best-effort attempt to install a start-on-startup
 // user or system service via systemd, launchd, or reg.exe
-func Install(c *service.Service) error {
+func Install(c *service.Service) (string, error) {
 	if "" == c.Exec {
 		c.Exec = c.Name
 	}
@@ -24,23 +24,23 @@ func Install(c *service.Service) error {
 		if nil != err {
 			fmt.Fprintf(os.Stderr, "Unrecoverable Error: %s", err)
 			os.Exit(4)
-			return err
+			return "", err
 		} else {
 			c.Home = home
 		}
 	}
 
-	err := install(c)
+	name, err := install(c)
 	if nil != err {
-		return err
+		return "", err
 	}
 
 	err = os.MkdirAll(c.Logdir, 0755)
 	if nil != err {
-		return err
+		return "", err
 	}
 
-	return nil
+	return name, nil
 }
 
 func Start(conf *service.Service) error {

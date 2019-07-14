@@ -227,3 +227,21 @@ func adjustPrivs(system bool, cmds []Runnable) []Runnable {
 
 	return cmds
 }
+
+func Run(bin string, args ...string) error {
+	cmd := exec.Command(bin, args...)
+	// for debugging
+	/*
+		out, err := cmd.CombinedOutput()
+		if nil != err {
+			fmt.Println(err)
+		}
+		fmt.Println(string(out))
+	*/
+
+	err := cmd.Start()
+	if nil != err {
+		return err
+	}
+	return nil
+}

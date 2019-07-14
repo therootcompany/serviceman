@@ -1,5 +1,6 @@
 //go:generate go run -mod=vendor git.rootprojects.org/root/go-gitver
 
+// main runs the things and does the stuff
 package main
 
 import (
@@ -9,8 +10,11 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"os/user"
+	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"git.rootprojects.org/root/go-serviceman/manager"
 	"git.rootprojects.org/root/go-serviceman/runner"
@@ -62,26 +66,15 @@ func add() {
 		Restart: true,
 	}
 
-	args := []string{}
-	for i := range os.Args {
-		if "--" == os.Args[i] {
-			if len(os.Args) > i+1 {
-				args = os.Args[i+1:]
-			}
-			os.Args = os.Args[:i]
-			break
-		}
-	}
-	conf.Argv = args
-
 	force := false
 	forUser := false
 	forSystem := false
+	dryrun := false
 	flag.StringVar(&conf.Title, "title", "", "a human-friendly name for the service")
 	flag.StringVar(&conf.Desc, "desc", "", "a human-friendly description of the service (ex: Foo App)")
 	flag.StringVar(&conf.Name, "name", "", "a computer-friendly name for the service (ex: foo-app)")
 	flag.StringVar(&conf.URL, "url", "", "the documentation on home page of the service")
-	//flag.StringVar(&conf.Workdir, "workdir", "", "the directory in which the service should be started")
+	flag.StringVar(&conf.Workdir, "workdir", "", "the directory in which the service should be started (if supported)")
 	flag.StringVar(&conf.ReverseDNS, "rdns", "", "a plist-friendly Reverse DNS name for launchctl (ex: com.example.foo-app)")
 	flag.BoolVar(&forSystem, "system", false, "attempt to add system service as an unprivileged/unelevated user")
 	flag.BoolVar(&forUser, "user", false, "add user space / user mode service even when admin/root/sudo/elevated")
@@ -89,67 +82,339 @@ func add() {
 	flag.StringVar(&conf.User, "username", "", "run the service as this user")
 	flag.StringVar(&conf.Group, "groupname", "", "run the service as this group")
 	flag.BoolVar(&conf.PrivilegedPorts, "cap-net-bind", false, "this service should have access to privileged ports")
+	flag.BoolVar(&dryrun, "dryrun", false, "output the service file without modifying anything on disk")
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n\n", os.Args[0])
+
+		flag.PrintDefaults()
+
+		fmt.Fprintf(os.Stderr, "Flags and arguments after \"--\" will be completely ignored by serviceman\n", os.Args[0])
+	}
 	flag.Parse()
-	args = flag.Args()
+	flagargs := flag.Args()
+
+	// You must have something to run, duh
+	n := len(flagargs)
+	if 0 == n {
+		fmt.Println("Usage: serviceman add ./foo-app --foo-arg")
+		os.Exit(2)
+		return
+	}
 
 	if forUser && forSystem {
 		fmt.Println("Pfff! You can't --user AND --system! What are you trying to pull?")
 		os.Exit(1)
 		return
 	}
+
+	// There are three groups of flags
+	// serviceman --flag1 arg1 non-flag-arg --child1 -- --raw1 -- --raw2
+	//  serviceman --flag1 arg1   // these belong to serviceman
+	//  non-flag-arg --child1     // these will be interpretted
+	//  --                        // separator
+	//  --raw1 -- --raw2          // after the separater (including additional separators) will be ignored
+	rawargs := []string{}
+	for i := range flagargs {
+		if "--" == flagargs[i] {
+			if len(flagargs) > i+1 {
+				rawargs = flagargs[i+1:]
+			}
+			flagargs = flagargs[:i]
+			break
+		}
+	}
+
+	// Assumptions
+	ass := []string{}
 	if forUser {
 		conf.System = false
 	} else if forSystem {
 		conf.System = true
 	} else {
 		conf.System = manager.IsPrivileged()
+		if conf.System {
+			ass = append(ass, "# Because you're a privileged user")
+			ass = append(ass, "  --system")
+			ass = append(ass, "")
+		} else {
+			ass = append(ass, "# Because you're a unprivileged user")
+			ass = append(ass, "  --user")
+			ass = append(ass, "")
+		}
+	}
+	if "" == conf.Workdir {
+		dir, _ := os.Getwd()
+		conf.Workdir = dir
+		ass = append(ass, "# Because this is your current working directory")
+		ass = append(ass, fmt.Sprintf("  --workdir %s", conf.Workdir))
+		ass = append(ass, "")
+	}
+	if "" == conf.Name {
+		name, _ := os.Getwd()
+		base := filepath.Base(name)
+		ext := filepath.Ext(base)
+		n := (len(base) - len(ext))
+		name = base[:n]
+		if "" == name {
+			name = base
+		}
+		conf.Name = name
+		ass = append(ass, "# Because this is the name of your current working directory")
+		ass = append(ass, fmt.Sprintf("  --name %s", conf.Name))
+		ass = append(ass, "")
 	}
 
-	n := len(args)
-	if 0 == n {
-		fmt.Println("Usage: serviceman add ./foo-app -- --foo-arg")
-		os.Exit(2)
+	exepath, err := findExec(flagargs[0], force)
+	if nil != err {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(3)
+		return
+	}
+	flagargs[0] = exepath
+
+	exeargs, err := testScript(flagargs[0], force)
+	if nil != err {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(3)
 		return
 	}
 
-	execpath, err := manager.WhereIs(args[0])
-	if nil != err {
-		fmt.Fprintf(os.Stderr, "Error: '%s' could not be found in PATH or working directory.\n", args[0])
-		if !force {
-			os.Exit(3)
-			return
+	flagargs = append(exeargs, flagargs...)
+	// TODO
+	for i := range flagargs {
+		arg := flagargs[i]
+		arg = filepath.ToSlash(arg)
+		// Paths considered to be anything starting with ./, .\, /, \, C:
+		if "." == arg || strings.Contains(arg, "/") {
+			//if "." == arg || (len(arg) >= 2 && "./" == arg[:2] || '/' == arg[0] || "C:" == strings.ToUpper(arg[:1])) {
+			var err error
+			arg, err = filepath.Abs(arg)
+			if nil == err {
+				_, err = os.Stat(arg)
+			}
+			if nil != err {
+				fmt.Printf("%q appears to be a file path, but %q could not be read\n", flagargs[i], arg)
+				if !force {
+					os.Exit(7)
+					return
+				}
+				continue
+			}
+
+			if '\\' != os.PathSeparator {
+				// Convert paths back to .\ for Windows
+				arg = filepath.FromSlash(arg)
+			}
+
+			// Lookin' good
+			flagargs[i] = arg
 		}
-	} else {
-		args[0] = execpath
-	}
-	conf.Exec = args[0]
-	args = args[1:]
-
-	if n >= 2 {
-		conf.Interpreter = conf.Exec
-		conf.Exec = args[0]
-		conf.Argv = append(args[1:], conf.Argv...)
 	}
 
-	conf.Normalize(force)
+	// We won't bother with Interpreter here
+	// (it's really just for documentation),
+	// but we will add any and all unchecked args to the full slice
+	conf.Exec = flagargs[0]
+	conf.Argv = append(flagargs[1:], rawargs...)
+
+	// TODO update docs: go to the work directory
+	// TODO test with "npm start"
+
+	conf.NormalizeWithoutPath()
 
 	//fmt.Printf("\n%#v\n\n", conf)
 	if conf.System && !manager.IsPrivileged() {
 		fmt.Fprintf(os.Stderr, "Warning: You may need to use 'sudo' to add %q as a privileged system service.\n", conf.Name)
 	}
 
-	err = manager.Install(conf)
-	switch e := err.(type) {
-	case nil:
-		// do nothing
-	case *manager.ErrDaemonize:
-		runAsDaemon(e.DaemonArgs[0], e.DaemonArgs[1:]...)
-	default:
-		fmt.Fprintf(os.Stderr, "%s\n", err)
+	if len(ass) > 0 {
+		fmt.Println("OPTIONS: Making some assumptions...\n")
+		for i := range ass {
+			fmt.Println("\t" + ass[i])
+		}
 	}
 
+	// Find who this is running as
+	// And pretty print the command to run
+	runAs := conf.User
+	var wasflag bool
+	fmt.Printf("COMMAND: Service %q will be run like this (more or less):\n\n", conf.Title)
+	if conf.System {
+		if "" == runAs {
+			runAs = "root"
+		}
+		fmt.Printf("\t# Starts on system boot, as %q\n", runAs)
+	} else {
+		u, _ := user.Current()
+		runAs = u.Name
+		if "" == runAs {
+			runAs = u.Username
+		}
+		fmt.Printf("\t# Starts as %q, when %q logs in\n", runAs, u.Username)
+	}
+	//fmt.Printf("\tpushd %s\n", conf.Workdir)
+	fmt.Printf("\t%s\n", conf.Exec)
+	for i := range conf.Argv {
+		arg := conf.Argv[i]
+		if '-' == arg[0] {
+			if wasflag {
+				fmt.Println()
+			}
+			wasflag = true
+			fmt.Printf("\t\t%s", arg)
+		} else {
+			if wasflag {
+				fmt.Printf(" %s\n", arg)
+			} else {
+				fmt.Printf("\t\t%s\n", arg)
+			}
+			wasflag = false
+		}
+	}
+	if wasflag {
+		fmt.Println()
+	}
+	fmt.Println()
+
+	// TODO output config without installing
+	if dryrun {
+		b, err := manager.Render(conf)
+		if nil != err {
+			fmt.Fprintf(os.Stderr, "Error rendering: %s\n", err)
+			os.Exit(10)
+		}
+		fmt.Println(string(b))
+		return
+	}
+
+	fmt.Printf("LAUNCHER: ")
+	servicetype, err := manager.Install(conf)
+	if nil != err {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(500)
+		return
+	}
+
+	fmt.Printf("LOGS: ")
 	printLogMessage(conf)
 	fmt.Println()
+
+	servicemode := "USER MODE"
+	if conf.System {
+		servicemode = "SYSTEM"
+	}
+	fmt.Printf(
+		"SUCCESS:\n\n\t%q started as a %q %s service, running as %q\n",
+		conf.Name,
+		servicetype,
+		servicemode,
+		runAs,
+	)
+	fmt.Println()
+}
+
+func findExec(exe string, force bool) (string, error) {
+	// ex: node => /usr/local/bin/node
+	// ex: ./demo.js => /Users/aj/project/demo.js
+	exepath, err := exec.LookPath(exe)
+	if nil != err {
+		var msg string
+		if strings.Contains(filepath.ToSlash(exe), "/") {
+			if _, err := os.Stat(exe); err != nil {
+				msg = fmt.Sprintf("Error: '%s' could not be found in PATH or working directory.\n", exe)
+			} else {
+				msg = fmt.Sprintf("Error: '%s' is not an executable.\nYou may be able to fix that. Try running this:\n\tchmod a+x %s\n", exe, exe)
+			}
+		} else {
+			if _, err := os.Stat(exe); err != nil {
+				msg = fmt.Sprintf("Error: '%s' could not be found in PATH", exe)
+			} else {
+				msg = fmt.Sprintf("Error: '%s' could not be found in PATH, did you mean './%s'?\n", exe, exe)
+			}
+		}
+		if !force {
+			return "", fmt.Errorf(msg)
+		}
+		fmt.Fprintf(os.Stderr, "%s\n", msg)
+		return exe, nil
+	}
+
+	// ex: \Users\aj\project\demo.js => /Users/aj/project/demo.js
+	// Can't have an error here when lookpath succeeded
+	exepath, _ = filepath.Abs(filepath.ToSlash(exepath))
+	return exepath, nil
+}
+
+func testScript(exepath string, force bool) ([]string, error) {
+	f, err := os.Open(exepath)
+	b := make([]byte, 256)
+	if nil == err {
+		_, err = f.Read(b)
+	}
+	if nil != err || len(b) < len("#!/x") {
+		msg := fmt.Sprintf("Error when testing if '%s' is a binary or script: could not read file: %s\n", exepath, err)
+		if !force {
+			return nil, fmt.Errorf(msg)
+		}
+		fmt.Fprintf(os.Stderr, "%s\n", msg)
+		return nil, nil
+	}
+
+	// Nott sure if this is more readable and idiomatic as if else or switch
+	// However, the order matters
+	switch {
+	case utf8.Valid(b):
+		// Looks like an executable script
+		if "#!/" == string(b[:3]) {
+			break
+		}
+
+		msg := fmt.Sprintf("Error: %q looks like a script, but we don't know the interpreter.\nYou can probably fix this by...\n"+
+			"\tExplicitly naming the interpreter (ex: 'python my-script.py' instead of just 'my-script.py')\n"+
+			"\tPlacing a hashbang at the top of the script (ex: '#!/usr/bin/env python')", exepath)
+
+		if !force {
+			return nil, fmt.Errorf(msg)
+		}
+		return nil, nil
+	case "#!/" != string(b[:3]):
+		// Looks like a normal binary
+		return nil, nil
+	default:
+		// Looks like a corrupt script file
+		msg := "Error: It looks like you've specified a corrupt script file."
+		if !force {
+			return nil, fmt.Errorf(msg)
+		}
+		return nil, nil
+	}
+
+	// Deal with #!/whatever
+
+	// Get that first line
+	// "#!/usr/bin/env node" => ["/usr/bin/env", "node"]
+	// "#!/usr/bin/node --harmony => ["/usr/bin/node", "--harmony"]
+	s := string(b[2:]) // strip leading #!
+	s = strings.Split(strings.Replace(s, "\r\n", "\n", -1), "\n")[0]
+	allargs := strings.Split(strings.TrimSpace(s), " ")
+	args := []string{}
+	for i := range allargs {
+		arg := strings.TrimSpace(allargs[i])
+		if "" != arg {
+			args = append(args, arg)
+		}
+	}
+	if strings.HasSuffix(args[0], "/env") && len(args) > 1 {
+		// TODO warn that "env" is probably not an executable if 1 = len(args)?
+		args = args[1:]
+	}
+	exepath, err = findExec(args[0], force)
+	if nil != err {
+		return nil, err
+	}
+	args[0] = exepath
+
+	return args, nil
 }
 
 func start() {
@@ -185,14 +450,10 @@ func start() {
 	conf.NormalizeWithoutPath()
 
 	err := manager.Start(conf)
-	switch e := err.(type) {
-	case nil:
-		// do nothing
-	case *manager.ErrDaemonize:
-		runAsDaemon(e.DaemonArgs[0], e.DaemonArgs[1:]...)
-	default:
-		fmt.Println(err)
-		os.Exit(127)
+	if nil != err {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(500)
+		return
 	}
 }
 
@@ -242,7 +503,7 @@ func run() {
 	flag.Parse()
 
 	if "" == confpath {
-		fmt.Fprintf(os.Stderr, "%s", strings.Join(flag.Args(), " "))
+		fmt.Fprintf(os.Stderr, "%s\n", strings.Join(flag.Args(), " "))
 		fmt.Fprintf(os.Stderr, "--config /path/to/config.json is required\n")
 		usage()
 		os.Exit(1)
@@ -295,23 +556,5 @@ func run() {
 		return
 	}
 
-	runAsDaemon(os.Args[0], "run", "--config", confpath)
-}
-
-func runAsDaemon(bin string, args ...string) {
-	cmd := exec.Command(bin, args...)
-	// for debugging
-	/*
-		out, err := cmd.CombinedOutput()
-		if nil != err {
-			fmt.Println(err)
-		}
-		fmt.Println(string(out))
-	*/
-
-	err := cmd.Start()
-	if nil != err {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		os.Exit(500)
-	}
+	manager.Run(os.Args[0], "run", "--config", confpath)
 }
