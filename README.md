@@ -1,11 +1,17 @@
 # go-serviceman
 
-A cross-platform service manager.
+Cross-platform service management made easy.
 
-Because debugging launchctl, systemd, etc absolutely sucks!
+> sudo serviceman add --name foo ./serve.js --port 3000
 
-...and I wanted a reasonable way to install [Telebit](https://telebit.io) on Windows.
-(see more in the **Why** section below)
+> Success: "foo" started as a "launchd" SYSTEM service, running as "root"
+
+## Why?
+
+Because it sucks to debug launchctl, systemd, etc.
+
+Also, I wanted a reasonable way to install [Telebit](https://telebit.io) on Windows.
+(see more in the **More Why** section below)
 
 ## Features
 
@@ -33,7 +39,7 @@ Because debugging launchctl, systemd, etc absolutely sucks!
 -   Debugging
 -   Windows
 -   Building
--   Why
+-   More Why
 -   Legal
 
 # Usage
@@ -567,7 +573,7 @@ go build -mod=vendor -ldflags "-H=windowsgui" -o serviceman.exe
 go build -mod=vendor -o /usr/local/bin/serviceman
 ```
 
-# Why
+# More Why
 
 I created this for two reasons:
 
@@ -585,4 +591,5 @@ MPL-2.0 |
 
 Copyright 2019 AJ ONeal.
 
+<!-- {{ end }} -->
 <!-- {{ end }} -->
