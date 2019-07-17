@@ -79,6 +79,7 @@ func add() {
 	flag.BoolVar(&forSystem, "system", false, "attempt to add system service as an unprivileged/unelevated user")
 	flag.BoolVar(&forUser, "user", false, "add user space / user mode service even when admin/root/sudo/elevated")
 	flag.BoolVar(&force, "force", false, "if the interpreter or executable doesn't exist, or things don't make sense, try anyway")
+	flag.StringVar(&conf.Path, "path", "", "set the path for the resulting systemd service")
 	flag.StringVar(&conf.User, "username", "", "run the service as this user")
 	flag.StringVar(&conf.Group, "groupname", "", "run the service as this group")
 	flag.BoolVar(&conf.PrivilegedPorts, "cap-net-bind", false, "this service should have access to privileged ports")
