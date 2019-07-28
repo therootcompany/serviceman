@@ -88,6 +88,7 @@ MacOS (darwin): [64-bit Download ](https://rootprojects.org/serviceman/dist/darw
 
 ```
 curl https://rootprojects.org/serviceman/dist/darwin/amd64/serviceman -o serviceman
+chmod +x ./serviceman
 ```
 
 ### Windows
@@ -129,12 +130,14 @@ Linux (64-bit): [Download](https://rootprojects.org/serviceman/dist/linux/amd64/
 
 ```
 curl https://rootprojects.org/serviceman/dist/linux/amd64/serviceman -o serviceman
+chmod +x ./serviceman
 ```
 
 Linux (32-bit): [Download](https://rootprojects.org/serviceman/dist/linux/386/serviceman)
 
 ```
 curl https://rootprojects.org/serviceman/dist/linux/386/serviceman -o serviceman
+chmod +x ./serviceman
 ```
 
 </details>
@@ -148,24 +151,28 @@ RPi 4 (64-bit armv8): [Download](https://rootprojects.org/serviceman/dist/linux/
 
 ```
 curl https://rootprojects.org/serviceman/dist/linux/armv8/serviceman -o serviceman`
+chmod +x ./serviceman
 ```
 
 RPi 3 (armv7): [Download](https://rootprojects.org/serviceman/dist/linux/armv7/serviceman)
 
 ```
 curl https://rootprojects.org/serviceman/dist/linux/armv7/serviceman -o serviceman
+chmod +x ./serviceman
 ```
 
 ARMv6: [Download](https://rootprojects.org/serviceman/dist/linux/armv6/serviceman)
 
 ```
 curl https://rootprojects.org/serviceman/dist/linux/armv6/serviceman -o serviceman
+chmod +x ./serviceman
 ```
 
 RPi Zero (armv5): [Download](https://rootprojects.org/serviceman/dist/linux/armv5/serviceman)
 
 ```
 curl https://rootprojects.org/serviceman/dist/linux/armv5/serviceman -o serviceman
+chmod +x ./serviceman
 ```
 
 </details>
@@ -183,7 +190,6 @@ reg add HKEY_CURRENT_USER\Environment /v PATH /d "%PATH%;%userprofile%\bin"
 **All Others**
 
 ```
-chmod a+x ./serviceman
 sudo mv ./serviceman /usr/local/bin/
 ```
 
