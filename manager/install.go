@@ -51,6 +51,10 @@ func Stop(conf *service.Service) error {
 	return stop(conf)
 }
 
+func List(conf *service.Service) ([]string, []string, []error) {
+	return list(conf)
+}
+
 // IsPrivileged returns true if we suspect that the current user (or process) will be able
 // to write to system folders, bind to privileged ports, and otherwise
 // successfully run a system service.
@@ -65,6 +69,16 @@ func WhereIs(exe string) (string, error) {
 		return "", err
 	}
 	return filepath.Abs(filepath.ToSlash(exepath))
+}
+
+type ManageError struct {
+	Name   string
+	Hint   string
+	Parent error
+}
+
+func (e *ManageError) Error() string {
+	return e.Name + ": " + e.Hint + ": " + e.Parent.Error()
 }
 
 type ErrDaemonize struct {

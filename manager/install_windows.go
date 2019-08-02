@@ -130,6 +130,38 @@ func stop(conf *service.Service) error {
 	return runner.Stop(conf)
 }
 
+func list(c *service.Service) ([]string, []string, []error) {
+	var errs []error
+
+	regs, err := listRegistry(c)
+	if nil != err {
+		errs = append(errs, err)
+	}
+
+	cfgs, errors := listConfigs(c)
+	if 0 != len(errors) {
+		errs = append(errs, errors...)
+	}
+
+	managed := []string{}
+	for i := range cfgs {
+		managed = append(managed, cfgs[i].Name)
+	}
+
+	others := []string{}
+	for i := range regs {
+		reg := regs[i]
+		for j := range cfgs {
+			cfg := cfgs[j]
+			if reg != cfg.Title {
+				others = append(others, reg)
+			}
+		}
+	}
+
+	return managed, others, errs
+}
+
 func getRunnerArgs(c *service.Service) []string {
 	self := os.Args[0]
 	debug := ""
@@ -152,6 +184,84 @@ func getRunnerArgs(c *service.Service) []string {
 		"--config",
 		conffile,
 	}
+}
+
+type winConf struct {
+	Filename string `json:"-"`
+	Name     string `json:"name"`
+	Title    string `json:"title"`
+}
+
+func listConfigs(c *service.Service) ([]winConf, []error) {
+	var errs []error
+
+	smdir := `\opt\serviceman`
+	if !c.System {
+		smdir = filepath.Join(c.Home, ".local", smdir)
+	}
+	confpath := filepath.Join(smdir, `etc`)
+
+	infos, err := ioutil.ReadDir(confpath)
+	if nil != err {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		errs = append(errs, &ManageError{
+			Name:   confpath,
+			Hint:   "Read directory",
+			Parent: err,
+		})
+		return nil, errs
+	}
+
+	// TODO report active status
+	srvs := []winConf{}
+	for i := range infos {
+		filename := strings.ToLower(infos[i].Name())
+		if len(filename) <= srvLen || !strings.HasSuffix(srvExt, filename) {
+			continue
+		}
+
+		name := filename[:len(filename)-srvLen]
+		b, err := ioutil.ReadFile(filepath.Join(confpath, filename))
+		if nil != err {
+			errs = append(errs, &ManageError{
+				Name:   name,
+				Hint:   "Read file",
+				Parent: err,
+			})
+			continue
+		}
+		cfg := &winConf{Filename: filename}
+		err = json.Unmarshal(b, cfg)
+		if nil != err {
+			errs = append(errs, &ManageError{
+				Name:   name,
+				Hint:   "Parse JSON",
+				Parent: err,
+			})
+			continue
+		}
+
+		srvs = append(srvs)
+	}
+
+	return srvs, nil
+}
+
+func listRegistry(c *service.Service) ([]string, error) {
+	autorunKey := `SOFTWARE\Microsoft\Windows\CurrentVersion\Run`
+	k, _, err := registry.CreateKey(
+		registry.CURRENT_USER,
+		autorunKey,
+		registry.QUERY_VALUE,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer k.Close()
+
+	return k.ReadValueNames(-1)
 }
 
 // copies self to install path and returns config path
