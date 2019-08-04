@@ -35,6 +35,7 @@ Also, I wanted a reasonable way to install [Telebit](https://telebit.io) on Wind
     -   node
     -   python
     -   ruby
+    -   path
 -   Logging
 -   Debugging
 -   Windows
@@ -396,6 +397,25 @@ sudo serviceman add ruby ./serve.rb --config ./config.yaml
 
 See **Using with scripts** for more detailed information.
 
+</details>
+
+<details>
+<summary>Setting $PATH</summary>
+
+You can set the `$PATH` for your service like this:
+
+```bash
+sudo serviceman add ./myservice --path "/home/myuser/bin"
+```
+
+Snapshot your actual path like this:
+
+```bash
+sudo serviceman add ./myservice --path "$PATH"
+```
+
+Remember that this takes a snapshot and sets it in the configuration, it's not
+a live reference to your path.
 </details>
 
 ## Hints

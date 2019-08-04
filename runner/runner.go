@@ -78,6 +78,11 @@ func Start(conf *service.Service) error {
 		if "" != conf.Workdir {
 			cmd.Dir = conf.Workdir
 		}
+		if len(conf.Envs) > 0 {
+			for k, v := range conf.Envs {
+				cmd.Env = append(cmd.Env, k+"="+v)
+			}
+		}
 		err = cmd.Start()
 		if nil != err {
 			fmt.Fprintf(lf, "[%s] Could not start %q process: %s\n", time.Now(), conf.Name, err)

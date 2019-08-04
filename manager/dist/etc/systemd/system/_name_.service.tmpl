@@ -22,9 +22,6 @@ Wants=network-online.target systemd-networkd-wait-online.service
 
 {{ end -}}
 [Service]
-{{ if .Path -}}
-PATH={{ .Path }}
-{{ end -}}
 # Restart on crash (bad signal), but not on 'clean' failure (error exit code)
 # Allow up to 3 restarts within 10 seconds
 # (it's unlikely that a user or properly-running script will do this)
@@ -38,6 +35,9 @@ User={{ .User }}
 Group={{ .Group }}
 
 {{ end -}}
+{{- if .Envs }}
+Environment="{{- range $key, $value := .Envs }}{{ $key }}={{ $value }};{{- end }}"
+{{- end }}
 {{ if .Workdir -}}
 WorkingDirectory={{ .Workdir }}
 {{ end -}}
