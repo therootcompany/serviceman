@@ -51,6 +51,7 @@ The basic pattern of usage:
 sudo serviceman add --name "foobar" [options] [interpreter] <service> [--] [service options]
 sudo serviceman start <service>
 sudo serviceman stop <service>
+sudo serviceman list --all
 serviceman version
 ```
 
