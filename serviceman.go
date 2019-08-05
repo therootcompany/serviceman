@@ -30,6 +30,7 @@ func usage() {
 	fmt.Println("\tserviceman <command> --help")
 	fmt.Println("\tserviceman add ./foo-app -- --foo-arg")
 	fmt.Println("\tserviceman run --config ./foo-app.json")
+	fmt.Println("\tserviceman list --all")
 	fmt.Println("\tserviceman start <name>")
 	fmt.Println("\tserviceman stop <name>")
 }
@@ -54,6 +55,8 @@ func main() {
 		start()
 	case "stop":
 		stop()
+	case "list":
+		list()
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown argument %s\n", top)
 		usage()
@@ -85,13 +88,6 @@ func add() {
 	flag.StringVar(&conf.Group, "groupname", "", "run the service as this group")
 	flag.BoolVar(&conf.PrivilegedPorts, "cap-net-bind", false, "this service should have access to privileged ports")
 	flag.BoolVar(&dryrun, "dryrun", false, "output the service file without modifying anything on disk")
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n\n", os.Args[0])
-
-		flag.PrintDefaults()
-
-		fmt.Fprintf(os.Stderr, "Flags and arguments after \"--\" will be completely ignored by serviceman\n", os.Args[0])
-	}
 	flag.Parse()
 	flagargs := flag.Args()
 
@@ -317,6 +313,62 @@ func add() {
 		runAs,
 	)
 	fmt.Println()
+}
+
+func list() {
+	var verbose bool
+	forUser := false
+	forSystem := false
+	flag.BoolVar(&forSystem, "system", false, "attempt to add system service as an unprivileged/unelevated user")
+	flag.BoolVar(&forUser, "user", false, "add user space / user mode service even when admin/root/sudo/elevated")
+	flag.BoolVar(&verbose, "all", false, "show all services (even those not managed by serviceman)")
+	flag.Parse()
+
+	if forUser && forSystem {
+		fmt.Println("Pfff! You can't --user AND --system! What are you trying to pull?")
+		os.Exit(1)
+		return
+	}
+
+	conf := &service.Service{}
+	if forUser {
+		conf.System = false
+	} else if forSystem {
+		conf.System = true
+	} else {
+		conf.System = manager.IsPrivileged()
+	}
+
+	// Pretty much just for HomeDir
+	conf.NormalizeWithoutPath()
+
+	managed, others, errs := manager.List(conf)
+	for i := range errs {
+		fmt.Fprintf(os.Stderr, "possible error: %s\n", errs[i])
+	}
+	if len(errs) > 0 {
+		fmt.Fprintf(os.Stderr, "\n")
+	}
+
+	fmt.Println("serviceman-managed services:\n")
+	for i := range managed {
+		fmt.Println("\t" + managed[i])
+	}
+	if 0 == len(managed) {
+		fmt.Println("\t(none)")
+	}
+	fmt.Println("")
+
+	if verbose {
+		fmt.Println("other services:\n")
+		for i := range others {
+			fmt.Println("\t" + others[i])
+		}
+		if 0 == len(others) {
+			fmt.Println("\t(none)")
+		}
+		fmt.Println("")
+	}
 }
 
 func findExec(exe string, force bool) (string, error) {

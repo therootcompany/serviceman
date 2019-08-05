@@ -159,7 +159,7 @@ func stop(conf *service.Service) error {
 	return nil
 }
 
-// Render will create a systemd .service file using a simple the internal template
+// Render will create a systemd .service file using the simple internal template
 func Render(c *service.Service) ([]byte, error) {
 	defaultUserGroup(c)
 

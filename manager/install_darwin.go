@@ -108,6 +108,7 @@ func stop(conf *service.Service) error {
 	return nil
 }
 
+// Render will create a launchd .plist file using the simple internal template
 func Render(c *service.Service) ([]byte, error) {
 	// Create service file from template
 	b, err := static.ReadFile("dist/Library/LaunchDaemons/_rdns_.plist.tmpl")
@@ -142,7 +143,7 @@ func install(c *service.Service) (string, error) {
 	}
 
 	// Check paths first
-	err := os.MkdirAll(filepath.Dir(plistDir), 0755)
+	err := os.MkdirAll(plistDir, 0755)
 	if nil != err {
 		return "", err
 	}
