@@ -27,6 +27,8 @@
 	{{if .User -}}
 	<key>UserName</key>
 	<string>{{ .User }}</string>
+	{{end -}}
+	{{if .Group -}}
 	<key>GroupName</key>
 	<string>{{ .Group }}</string>
 	<key>InitGroups</key>

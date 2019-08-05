@@ -159,7 +159,10 @@ func stop(conf *service.Service) error {
 	return nil
 }
 
+// Render will create a systemd .service file using a simple the internal template
 func Render(c *service.Service) ([]byte, error) {
+	defaultUserGroup(c)
+
 	// Create service file from template
 	b, err := static.ReadFile("dist/etc/systemd/system/_name_.service.tmpl")
 	if err != nil {
@@ -181,15 +184,7 @@ func Render(c *service.Service) ([]byte, error) {
 }
 
 func install(c *service.Service) (string, error) {
-	// Linux-specific config options
-	if c.System {
-		if "" == c.User {
-			c.User = "root"
-		}
-	}
-	if "" == c.Group {
-		c.Group = c.User
-	}
+	defaultUserGroup(c)
 
 	// Check paths first
 	serviceDir := srvSysPath
@@ -229,4 +224,16 @@ func install(c *service.Service) (string, error) {
 	}
 
 	return "systemd", nil
+}
+
+func defaultUserGroup(c *service.Service) {
+	// Linux-specific config options
+	if c.System {
+		if "" == c.User {
+			c.User = "root"
+		}
+	}
+	if "" == c.Group {
+		c.Group = c.User
+	}
 }
