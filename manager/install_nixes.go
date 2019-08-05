@@ -40,15 +40,24 @@ func list(c *service.Service) ([]string, []string, []error) {
 			continue
 		}
 
-		r, err := os.Open(filepath.Join(confDir, fi.Name()))
+		confFile := filepath.Join(confDir, fi.Name())
+		r, err := os.Open(confFile)
 		if nil != err {
-			errs = append(errs, err)
+			errs = append(errs, &ManageError{
+				Name:   confFile,
+				Hint:   "Open file",
+				Parent: err,
+			})
 			continue
 		}
 
 		n, err := r.Read(b)
 		if nil != err {
-			errs = append(errs, err)
+			errs = append(errs, &ManageError{
+				Name:   confFile,
+				Hint:   "Read file",
+				Parent: err,
+			})
 			continue
 		}
 		b = b[:n]
