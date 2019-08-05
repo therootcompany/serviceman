@@ -306,7 +306,7 @@ func add() {
 		servicemode = "SYSTEM"
 	}
 	fmt.Printf(
-		"SUCCESS:\n\n\t%q started as a %q %s service, running as %q\n",
+		"SUCCESS:\n\n\t%q started as a %s %s service, running as %q\n",
 		conf.Name,
 		servicetype,
 		servicemode,

@@ -151,11 +151,21 @@ func list(c *service.Service) ([]string, []string, []error) {
 	others := []string{}
 	for i := range regs {
 		reg := regs[i]
+		if 0 == len(cfgs) {
+			others = append(others, reg)
+			continue
+		}
+
+		var found bool
 		for j := range cfgs {
 			cfg := cfgs[j]
-			if reg != cfg.Title {
-				others = append(others, reg)
+			// Registry Value Names are case-insensitive
+			if strings.ToLower(reg) == strings.ToLower(cfg.Title) {
+				found = true
 			}
+		}
+		if !found {
+			others = append(others, reg)
 		}
 	}
 
@@ -218,7 +228,7 @@ func listConfigs(c *service.Service) ([]winConf, []error) {
 	srvs := []winConf{}
 	for i := range infos {
 		filename := strings.ToLower(infos[i].Name())
-		if len(filename) <= srvLen || !strings.HasSuffix(srvExt, filename) {
+		if len(filename) <= srvLen || !strings.HasSuffix(filename, srvExt) {
 			continue
 		}
 
@@ -232,8 +242,8 @@ func listConfigs(c *service.Service) ([]winConf, []error) {
 			})
 			continue
 		}
-		cfg := &winConf{Filename: filename}
-		err = json.Unmarshal(b, cfg)
+		cfg := winConf{Filename: filename}
+		err = json.Unmarshal(b, &cfg)
 		if nil != err {
 			errs = append(errs, &ManageError{
 				Name:   name,
@@ -243,10 +253,10 @@ func listConfigs(c *service.Service) ([]winConf, []error) {
 			continue
 		}
 
-		srvs = append(srvs)
+		srvs = append(srvs, cfg)
 	}
 
-	return srvs, nil
+	return srvs, errs
 }
 
 func listRegistry(c *service.Service) ([]string, error) {
