@@ -39,5 +39,5 @@ echo "RPi Zero ARMv5"
 GOOS=linux GOARCH=arm GOARM=5 go build -mod=vendor -o dist/linux/armv5/${exe} $gocmd
 
 echo ""
-rsync -av ./dist/ ubuntu@rootprojects.org:/srv/www/rootprojects.org/serviceman/dist/
+#rsync -av ./dist/ ubuntu@rootprojects.org:/srv/www/rootprojects.org/serviceman/dist/
 # https://rootprojects.org/serviceman/dist/windows/amd64/serviceman.exe
