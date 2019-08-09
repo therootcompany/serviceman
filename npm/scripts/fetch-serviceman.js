@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 'use strict';
+var path = require('path');
 var os = require('os');
 
 // https://nodejs.org/api/os.html#os_os_arch
@@ -10,7 +11,7 @@ var arch = os.arch(); // process.arch
 // https://nodejs.org/api/os.html#os_os_platform
 // 'aix', 'darwin', 'freebsd', 'linux', 'openbsd', 'sunos', 'win32'
 var platform = os.platform(); // process.platform
-var ext = 'windows' === platform ? '.exe' : '';
+var ext = /^win/i.test(platform) ? '.exe' : '';
 
 // This is _probably_ right. It's good enough for us
 // https://github.com/nodejs/node/issues/13629
@@ -53,15 +54,26 @@ var mkdirp = require('@root/mkdirp');
 
 function needsUpdate(oldVer, newVer) {
 	// "v1.0.0-pre" is BEHIND "v1.0.0"
-	newVer = newVer.replace(/^v/, '').split(/[\.\-\+]/);
-	oldVer = oldVer.replace(/^v/, '').split(/[\.\-\+]/);
-	//console.log(oldVer, newVer);
+	newVer = newVer
+		.replace(/^v/, '')
+		.split(/[\.\-\+]/)
+		.filter(Boolean);
+	oldVer = oldVer
+		.replace(/^v/, '')
+		.split(/[\.\-\+]/)
+		.filter(Boolean);
 
+	if (!oldVer.length) {
+		return true;
+	}
+
+	// ex: v1.0.0-pre vs v1.0.0
 	if (newVer[3] && !oldVer[3]) {
 		// don't install beta over stable
 		return false;
 	}
 
+	// ex: old is v1.0.0-pre
 	if (oldVer[3]) {
 		if (oldVer[2] > 0) {
 			oldVer[2] -= 1;
@@ -77,6 +89,8 @@ function needsUpdate(oldVer, newVer) {
 			return true;
 		}
 	}
+
+	// ex: v1.0.1 vs v1.0.0-pre
 	if (newVer[3]) {
 		if (newVer[2] > 0) {
 			newVer[2] -= 1;
@@ -93,7 +107,7 @@ function needsUpdate(oldVer, newVer) {
 		}
 	}
 
-	//console.log(oldVer, newVer);
+	// ex: v1.0.1 vs v1.0.0
 	if (oldVer[0] > newVer[0]) {
 		return false;
 	} else if (oldVer[0] < newVer[0]) {
@@ -128,72 +142,128 @@ console.log(false === needsUpdate('0.5.0', '0.5.0-pre1'));
 console.log(false === needsUpdate('0.5.1', '0.5.0'));
 */
 
-exec('serviceman version', { windowsHide: true }, function(err, stdout) {
-	var oldVer = (stdout || '').split(' ')[0];
-	console.log(oldVer, newVer);
-	if (!needsUpdate(oldVer, newVer)) {
-		console.info(
-			'Current serviceman version is new enough:',
-			oldVer,
-			newVer
-		);
-		return;
-		//} else {
-		//	console.info('Current serviceman version is older:', oldVer, newVer);
-	}
-
-	var url = 'https://rootprojects.org/serviceman/dist/{{ .Platform }}/{{ .Arch }}/serviceman{{ .Ext }}'
-		.replace(/{{ .Version }}/g, newVer)
-		.replace(/{{ .Platform }}/g, platform)
-		.replace(/{{ .Arch }}/g, arch)
-		.replace(/{{ .Ext }}/g, ext);
-
-	console.info('Installing from', url);
-	return request({ uri: url, encoding: null }, function(err, resp) {
-		if (err) {
-			console.error(err);
+function install(name, bindirs, getVersion, parseVersion, urlTpl) {
+	exec(getVersion, { windowsHide: true }, function(err, stdout) {
+		var oldVer = parseVersion(stdout);
+		//console.log('old:', oldVer, 'new:', newVer);
+		if (!needsUpdate(oldVer, newVer)) {
+			console.info(
+				'Current ' + name + ' version is new enough:',
+				oldVer,
+				newVer
+			);
 			return;
+			//} else {
+			//	console.info('Current serviceman version is older:', oldVer, newVer);
 		}
 
-		//console.log(resp.body.byteLength);
-		//console.log(typeof resp.body);
-		var serviceman = 'serviceman' + ext;
-		return fs.writeFile(serviceman, resp.body, null, function(err) {
+		var url = urlTpl
+			.replace(/{{ .Version }}/g, newVer)
+			.replace(/{{ .Platform }}/g, platform)
+			.replace(/{{ .Arch }}/g, arch)
+			.replace(/{{ .Ext }}/g, ext);
+
+		console.info('Installing from', url);
+		return request({ uri: url, encoding: null }, function(err, resp) {
 			if (err) {
 				console.error(err);
 				return;
 			}
-			fs.chmodSync(serviceman, parseInt('0755', 8));
 
-			var path = require('path');
-			var localdir = '/usr/local/bin';
-			fs.rename(serviceman, path.join(localdir, serviceman), function(
-				err
-			) {
-				if (err) {
-					//console.error(err);
-				}
-				// ignore
-			});
-
-			var homedir = require('os').homedir();
-			var bindir = path.join(homedir, '.local', 'bin');
-			return mkdirp(bindir, function(err) {
-				if (err) {
-					console.error(err);
+			//console.log(resp.body.byteLength);
+			//console.log(typeof resp.body);
+			var bin = name + ext;
+			function next() {
+				if (!bindirs.length) {
 					return;
 				}
-
-				var localsrv = path.join(bindir, serviceman);
-				return fs.writeFile(localsrv, resp.body, function(err) {
+				var bindir = bindirs.pop();
+				return mkdirp(bindir, function(err) {
 					if (err) {
 						console.error(err);
 						return;
 					}
-					fs.chmodSync(localsrv, parseInt('0755', 8));
-					console.info('Wrote', serviceman, 'to', bindir);
+
+					var localsrv = path.join(bindir, bin);
+					return fs.writeFile(localsrv, resp.body, function(err) {
+						next();
+						if (err) {
+							console.error(err);
+							return;
+						}
+						fs.chmodSync(localsrv, parseInt('0755', 8));
+						console.info('Wrote', bin, 'to', bindir);
+					});
 				});
-			});
+			}
+			next();
 		});
 	});
-});
+}
+
+function winstall(name, bindir) {
+	try {
+		fs.writeFileSync(
+			path.join(bindir, name),
+			'#!/usr/bin/env bash\n"$(dirname "$0")/serviceman.exe" "$@"\nexit $?'
+		);
+	} catch (e) {
+		// ignore
+	}
+
+	// because bugs in npm + git bash oddities, of course
+	// https://npm.community/t/globally-installed-package-does-not-execute-in-git-bash-on-windows/9394
+	try {
+		fs.writeFileSync(
+			path.join(path.join(__dirname, '../../.bin'), name),
+			[
+				'#!/bin/sh',
+				'# manual bugfix patch for npm on windows',
+				'basedir=$(dirname "$(echo "$0" | sed -e \'s,\\\\,/,g\')")',
+				'"$basedir/../' + name + '/bin/' + name + '"   "$@"',
+				'exit $?'
+			].join('\n')
+		);
+	} catch (e) {
+		// ignore
+	}
+	try {
+		fs.writeFileSync(
+			path.join(path.join(__dirname, '../../..'), name),
+			[
+				'#!/bin/sh',
+				'# manual bugfix patch for npm on windows',
+				'basedir=$(dirname "$(echo "$0" | sed -e \'s,\\\\,/,g\')")',
+				'"$basedir/node_modules/' + name + '/bin/' + name + '"   "$@"',
+				'exit $?'
+			].join('\n')
+		);
+	} catch (e) {
+		// ignore
+	}
+	// end bugfix
+}
+
+function run() {
+	//var homedir = require('os').homedir();
+	//var bindir = path.join(homedir, '.local', 'bin');
+	var bindir = path.resolve(__dirname, '..', 'bin');
+	var name = 'serviceman';
+	if ('.exe' === ext) {
+		winstall(name, bindir);
+	}
+
+	return install(
+		name,
+		[bindir],
+		'serviceman version',
+		function parseVersion(stdout) {
+			return (stdout || '').split(' ')[0];
+		},
+		'https://rootprojects.org/serviceman/dist/{{ .Platform }}/{{ .Arch }}/serviceman{{ .Ext }}'
+	);
+}
+
+if (require.main === module) {
+	run();
+}

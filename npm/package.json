@@ -1,10 +1,19 @@
 {
 	"name": "serviceman",
-	"version": "0.5.2",
+	"version": "0.7.0",
 	"description": "A cross-platform service manager",
 	"main": "index.js",
+	"homepage": "https://git.rootprojects.org/root/serviceman/src/branch/master/npm",
+	"files": [
+		"bin/",
+		"scripts/"
+	],
+	"bin": {
+		"serviceman": "bin/serviceman"
+	},
 	"scripts": {
-		"postinstall": "scripts/fetch-serviceman.js",
+		"serviceman": "serviceman",
+		"postinstall": "node scripts/fetch-serviceman.js",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"repository": {
