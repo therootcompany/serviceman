@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -285,6 +286,13 @@ func installServiceman(c *service.Service) ([]string, error) {
 
 	if smbin != self {
 		err := os.MkdirAll(filepath.Dir(smbin), 0755)
+		if nil != err {
+			return nil, err
+		}
+		// Note: self may be the short name, in which case
+		// we should just use whatever is closest in the path
+		// exec.LookPath will handle this correctly
+		self, err = exec.LookPath(self)
 		if nil != err {
 			return nil, err
 		}
