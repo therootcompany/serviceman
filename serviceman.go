@@ -230,7 +230,7 @@ func add() {
 	}
 
 	if len(ass) > 0 {
-		fmt.Println("OPTIONS: Making some assumptions...\n")
+		fmt.Printf("OPTIONS: Making some assumptions...\n\n")
 		for i := range ass {
 			fmt.Println("\t" + ass[i])
 		}
@@ -350,7 +350,7 @@ func list() {
 		fmt.Fprintf(os.Stderr, "\n")
 	}
 
-	fmt.Println("serviceman-managed services:\n")
+	fmt.Printf("serviceman-managed services:\n\n")
 	for i := range managed {
 		fmt.Println("\t" + managed[i])
 	}
@@ -360,7 +360,7 @@ func list() {
 	fmt.Println("")
 
 	if verbose {
-		fmt.Println("other services:\n")
+		fmt.Printf("other services:\n\n")
 		for i := range others {
 			fmt.Println("\t" + others[i])
 		}
