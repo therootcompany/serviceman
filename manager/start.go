@@ -3,6 +3,7 @@ package manager
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -121,7 +122,12 @@ func getSystemSrvs() ([]string, error) {
 }
 
 func getUserSrvs(home string) ([]string, error) {
-	return getSrvs(filepath.Join(home, srvUserPath))
+	confDir := filepath.Join(home, srvUserPath)
+	err := os.MkdirAll(confDir, 0755)
+	if nil != err {
+		return nil, err
+	}
+	return getSrvs(confDir)
 }
 
 // "come.example.foo.plist" matches "foo"
