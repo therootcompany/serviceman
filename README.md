@@ -85,7 +85,7 @@ see the instructions for building far down below.
 ## Downloads
 
 ```
-curl "https://rootprojects.org/serviceman/dist/$(uname -s)/$(uname -m)/serviceman" -o serviceman
+curl -fsSL "https://rootprojects.org/serviceman/dist/$(uname -s)/$(uname -m)/serviceman" -o serviceman
 chmod +x ./serviceman
 ```
 
