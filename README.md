@@ -84,7 +84,15 @@ see the instructions for building far down below.
 
 ## Downloads
 
+```
+curl "https://rootprojects.org/serviceman/dist/$(uname -s)/$(uname -m)/serviceman" -o serviceman
+chmod +x ./serviceman
+```
+
 ### MacOS
+
+<details>
+<summary>See download options</summary>
 
 MacOS (darwin): [64-bit Download ](https://rootprojects.org/serviceman/dist/darwin/amd64/serviceman)
 
@@ -92,6 +100,8 @@ MacOS (darwin): [64-bit Download ](https://rootprojects.org/serviceman/dist/darw
 curl https://rootprojects.org/serviceman/dist/darwin/amd64/serviceman -o serviceman
 chmod +x ./serviceman
 ```
+
+</details>
 
 ### Windows
 
@@ -124,6 +134,7 @@ powershell.exe "(New-Object Net.WebClient).DownloadFile('https://rootprojects.or
 </details>
 
 ### Linux
+
 
 <details>
 <summary>See download options</summary>
