@@ -1,4 +1,4 @@
-# go-serviceman
+# [go-serviceman](https://git.rootprojects.org/root/serviceman)
 
 Cross-platform service management made easy.
 
@@ -630,5 +630,4 @@ MPL-2.0 |
 
 Copyright 2019 AJ ONeal.
 
-<!-- {{ end }} -->
 <!-- {{ end }} -->
