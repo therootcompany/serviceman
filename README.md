@@ -77,6 +77,24 @@ The **default** is to register a _user_ services. To register a _system_ service
 
 # Install
 
+You can install `serviceman` directly from the official git releases with [`webi`](https://webinstall.dev/serviceman):
+
+**Mac**, **Linux**:
+
+```bash
+curl -sL https://webinstall.dev/serviceman | bash
+```
+
+**Windows 10**:
+
+```pwsh
+curl.exe -sLA "MS" https://webinstall.dev/serviceman | powershell
+```
+
+You can run this from cmd.exe or PowerShell (curl.exe is a native part of Windows 10).
+
+## Manual Install
+
 There are a number of pre-built binaries.
 
 If none of them work for you, or you prefer to build from source,
