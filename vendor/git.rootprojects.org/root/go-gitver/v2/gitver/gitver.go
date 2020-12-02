@@ -21,12 +21,14 @@ func init() {
 	gitVer = regexp.MustCompile(`^(v\d+\.\d+)\.(\d+)(-(\d+))?(-(g[0-9a-f]+))?(-(dirty))?`)
 }
 
+// Versions describes the various version properties
 type Versions struct {
 	Timestamp time.Time
 	Version   string
 	Rev       string
 }
 
+// ExecAndParse will run git and parse the output
 func ExecAndParse() (*Versions, error) {
 	desc, err := gitDesc()
 	if nil != err {
@@ -58,7 +60,7 @@ func gitDesc() (string, error) {
 	out, err := cmd.CombinedOutput()
 	if nil != err {
 		// Don't panic, just carry on
-		//out = []byte("v0.0.0-0-g0000000")
+		//out = []byte("0.0.0-0-g0000000")
 		return "", err
 	}
 	return strings.TrimSpace(string(out)), nil
@@ -83,7 +85,7 @@ func gitRev() (string, error) {
 func semVer(desc string) (string, error) {
 	if exactVer.MatchString(desc) {
 		// v1.0.0
-		return desc, nil
+		return strings.TrimPrefix(desc, "v"), nil
 	}
 
 	if !gitVer.MatchString(desc) {
@@ -122,10 +124,19 @@ func semVer(desc string) (string, error) {
 		ver += vers[8]
 	}
 
-	return ver, nil
+	return strings.TrimPrefix(ver, "v"), nil
 }
 
 func gitTimestamp(desc string) (time.Time, error) {
+	// Other options:
+	//
+	// Commit Date
+	//	git log -1 --format=%cd --date=format:%Y-%m-%dT%H:%M:%SZ%z
+	//
+	// Author Date
+	// git log -1 --format=%ad --date=format:%Y-%m-%dT%H:%M:%SZ%z
+	//
+	// I think I chose this because it would account for dirty-ness better... maybe?
 	args := []string{
 		"git",
 		"show", desc,

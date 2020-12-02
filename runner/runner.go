@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"git.rootprojects.org/root/go-serviceman/service"
+	"git.rootprojects.org/root/serviceman/service"
 
 	ps "github.com/mitchellh/go-ps"
 )

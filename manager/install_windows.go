@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"git.rootprojects.org/root/go-serviceman/runner"
-	"git.rootprojects.org/root/go-serviceman/service"
+	"git.rootprojects.org/root/serviceman/runner"
+	"git.rootprojects.org/root/serviceman/service"
 
 	"golang.org/x/sys/windows/registry"
 )

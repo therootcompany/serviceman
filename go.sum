@@ -1,5 +1,5 @@
-git.rootprojects.org/root/go-gitver v1.1.2 h1:AQhr8ktJyP+X+jFbtLavCi/FQLSmB6xvdG2Nfp+J2JA=
-git.rootprojects.org/root/go-gitver v1.1.2/go.mod h1:Rj1v3TBhvdaSphFEqMynUYwAz/4f+wY/+syBTvRrmlI=
+git.rootprojects.org/root/go-gitver/v2 v2.0.2 h1:T+Je13wrY1jz4OPJF98HnuCNp6n2Xe2uK6/NNF6a4+0=
+git.rootprojects.org/root/go-gitver/v2 v2.0.2/go.mod h1:ur82M/jZcvr1WWihyVtNEgDBqIjo22o56wcVHeVJFh8=
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/UnnoTed/fileb0x v1.1.3 h1:TUfJRey+psXuivBqasgp7Du3iXB4hzjI5UXDl+BCrzE=

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"git.rootprojects.org/root/go-serviceman/service"
+	"git.rootprojects.org/root/serviceman/service"
 )
 
 // this code is shared between Mac and Linux, but may diverge in the future

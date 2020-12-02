@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"git.rootprojects.org/root/go-serviceman/service"
+	"git.rootprojects.org/root/serviceman/service"
 )
 
 func printLogMessage(conf *service.Service) {

@@ -3,7 +3,7 @@
 package manager
 
 import (
-	"git.rootprojects.org/root/go-serviceman/service"
+	"git.rootprojects.org/root/serviceman/service"
 )
 
 func Render(c *service.Service) ([]byte, error) {

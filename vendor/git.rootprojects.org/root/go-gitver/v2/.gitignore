@@ -1,6 +1,10 @@
 xversion.go
 zversion.go
 
+/go-gitver
+hello
+examples/*/*.sum
+
 # ---> Go
 # Binaries for programs and plugins
 *.exe

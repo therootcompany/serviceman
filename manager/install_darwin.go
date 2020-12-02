@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"git.rootprojects.org/root/go-serviceman/manager/static"
-	"git.rootprojects.org/root/go-serviceman/service"
+	"git.rootprojects.org/root/serviceman/manager/static"
+	"git.rootprojects.org/root/serviceman/service"
 )
 
 const (

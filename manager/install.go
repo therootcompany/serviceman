@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"git.rootprojects.org/root/go-serviceman/service"
+	"git.rootprojects.org/root/serviceman/service"
 )
 
 // Install will do a best-effort attempt to install a start-on-startup

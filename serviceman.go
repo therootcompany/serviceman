@@ -1,4 +1,4 @@
-//go:generate go run -mod=vendor git.rootprojects.org/root/go-gitver
+//go:generate go run -mod=vendor git.rootprojects.org/root/go-gitver/v2
 
 // main runs the things and does the stuff
 package main
@@ -16,14 +16,23 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"git.rootprojects.org/root/go-serviceman/manager"
-	"git.rootprojects.org/root/go-serviceman/runner"
-	"git.rootprojects.org/root/go-serviceman/service"
+	"git.rootprojects.org/root/serviceman/manager"
+	"git.rootprojects.org/root/serviceman/runner"
+	"git.rootprojects.org/root/serviceman/service"
 )
 
-var GitRev = "000000000"
-var GitVersion = "v0.5.3-pre+dirty"
-var GitTimestamp = time.Now().Format(time.RFC3339)
+var (
+	// commit refers to the abbreviated commit hash
+	commit = "0000000"
+	// version refers to the most recent tag, plus any commits made since then
+	version = "v0.0.0-pre0+0000000"
+	// date refers to the timestamp of the most recent commit
+	date = time.Now().Format(time.RFC3339)
+)
+
+func ver() string {
+	return fmt.Sprintf("serviceman %s (%s) %s", version, commit[:7], date)
+}
 
 func usage() {
 	fmt.Println("Usage:")
@@ -36,6 +45,14 @@ func usage() {
 }
 
 func main() {
+	if len(os.Args) >= 2 {
+		if "version" == strings.TrimLeft(os.Args[1], "-") {
+			fmt.Printf("%s\n", ver())
+			os.Exit(0)
+			return
+		}
+	}
+
 	if len(os.Args) < 2 {
 		fmt.Fprintf(os.Stderr, "Too few arguments: %s\n", strings.Join(os.Args, " "))
 		usage()
@@ -46,7 +63,7 @@ func main() {
 	os.Args = append(os.Args[:1], os.Args[2:]...)
 	switch top {
 	case "version":
-		fmt.Println(GitVersion, GitTimestamp, GitRev)
+		fmt.Println(ver())
 	case "run":
 		run()
 	case "add":
