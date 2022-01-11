@@ -91,6 +91,7 @@ func add() {
 	forSystem := false
 	dryrun := false
 	pathEnv := ""
+	envs := ""
 	flag.StringVar(&conf.Title, "title", "", "a human-friendly name for the service")
 	flag.StringVar(&conf.Desc, "desc", "", "a human-friendly description of the service (ex: Foo App)")
 	flag.StringVar(&conf.Name, "name", "", "a computer-friendly name for the service (ex: foo-app)")
@@ -100,7 +101,8 @@ func add() {
 	flag.BoolVar(&forSystem, "system", false, "attempt to add system service as an unprivileged/unelevated user")
 	flag.BoolVar(&forUser, "user", false, "add user space / user mode service even when admin/root/sudo/elevated")
 	flag.BoolVar(&force, "force", false, "if the interpreter or executable doesn't exist, or things don't make sense, try anyway")
-	flag.StringVar(&pathEnv, "path", "", "set the path for the resulting systemd service")
+	flag.StringVar(&pathEnv, "path", "", "set the PATH env for the resulting systemd service")
+	flag.StringVar(&envs, "env", "", "set the env for the resulting systemd service")
 	flag.StringVar(&conf.User, "username", "", "run the service as this user")
 	flag.StringVar(&conf.Group, "groupname", "", "run the service as this group")
 	flag.BoolVar(&conf.PrivilegedPorts, "cap-net-bind", false, "this service should have access to privileged ports")
@@ -181,6 +183,19 @@ func add() {
 	if "" != pathEnv {
 		conf.Envs = make(map[string]string)
 		conf.Envs["PATH"] = pathEnv
+	}
+
+	if envs != "" {
+		if conf.Envs == nil {
+			conf.Envs = make(map[string]string)
+		}
+		es := strings.Split(envs, ",")
+		for _, e := range es {
+			ev := strings.SplitN(e, "=", 2)
+			if len(ev) == 2 {
+				conf.Envs[ev[0]] = ev[1]
+			}
+		}
 	}
 
 	exepath, err := findExec(flagargs[0], force)
