@@ -1,4 +1,14 @@
-# [go-serviceman](https://git.rootprojects.org/root/serviceman)
+# New, Rewritten Version at New Repo
+
+See <https://github.com/bnnanet/serviceman>.
+
+The new version is rewritten in POSIX script.
+
+The **transitional version 0.9.x** will print several **warnings for options that have changed**, except `--user`, which is now `--agent` (as it was rarely used, and most often caused confusion).
+
+See [Changes in v1.0](https://github.com/bnnanet/serviceman?tab=readme-ov-file#changes-in-v10) for details.
+
+# [go-serviceman](https://git.rootprojects.org/root/serviceman) (DEPRECATED)
 
 Cross-platform service management made easy.
 
@@ -43,7 +53,7 @@ Also, I wanted a reasonable way to install [Telebit](https://telebit.io) on Wind
 -   More Why
 -   Legal
 
-# Usage
+# Usage (DEPRECATED)
 
 The basic pattern of usage:
 
@@ -76,6 +86,8 @@ System services start **on boot**.
 The **default** is to register a _user_ services. To register a _system_ service, use `sudo` or run as `root`.
 
 # Install
+
+**Note**: v0.9.x+ install from <https://github.com/bnnanet/serviceman>.
 
 You can install `serviceman` directly from the official git releases with [`webi`](https://webinstall.dev/serviceman):
 
