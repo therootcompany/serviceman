@@ -2,6 +2,8 @@
 
 See <https://github.com/bnnanet/serviceman>.
 
+## [serviceman-sh](https://github.com/bnnanet/serviceman)
+
 The new version is rewritten in POSIX script.
 
 The **transitional version 0.9.x** will print several **warnings for options that have changed**, except `--user`, which is now `--agent` (as it was rarely used, and most often caused confusion).
