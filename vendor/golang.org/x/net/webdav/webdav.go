@@ -3,6 +3,24 @@
 // license that can be found in the LICENSE file.
 
 // Package webdav provides a WebDAV server implementation.
+//
+// # Security Considerations
+//
+// This package is not hardened against malicious clients.
+//
+// The following misbehaviors are considered vulnerabilities
+// and should be reported per the [Go Security Policy] if
+// present:
+//
+//   - Remote code execution.
+//   - Access of a file outside of the restricted tree
+//     defined by [Dir].
+//
+// Other misbahaviors (crashes, excessive resource consumption,
+// lack of isolation between clients, etc.) will be handled
+// as ordinary bugs, not vulnerabilities.
+//
+// [Go Security Policy]: https://go.dev/security/policy
 package webdav // import "golang.org/x/net/webdav"
 
 import (
@@ -13,6 +31,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -174,7 +193,7 @@ func (h *Handler) handleOptions(w http.ResponseWriter, r *http.Request) (status 
 	if err != nil {
 		return status, err
 	}
-	ctx := getContext(r)
+	ctx := r.Context()
 	allow := "OPTIONS, LOCK, PUT, MKCOL"
 	if fi, err := h.FileSystem.Stat(ctx, reqPath); err == nil {
 		if fi.IsDir() {
@@ -197,7 +216,7 @@ func (h *Handler) handleGetHeadPost(w http.ResponseWriter, r *http.Request) (sta
 		return status, err
 	}
 	// TODO: check locks for read-only access??
-	ctx := getContext(r)
+	ctx := r.Context()
 	f, err := h.FileSystem.OpenFile(ctx, reqPath, os.O_RDONLY, 0)
 	if err != nil {
 		return http.StatusNotFound, err
@@ -231,7 +250,7 @@ func (h *Handler) handleDelete(w http.ResponseWriter, r *http.Request) (status i
 	}
 	defer release()
 
-	ctx := getContext(r)
+	ctx := r.Context()
 
 	// TODO: return MultiStatus where appropriate.
 
@@ -262,10 +281,13 @@ func (h *Handler) handlePut(w http.ResponseWriter, r *http.Request) (status int,
 	defer release()
 	// TODO(rost): Support the If-Match, If-None-Match headers? See bradfitz'
 	// comments in http.checkEtag.
-	ctx := getContext(r)
+	ctx := r.Context()
 
 	f, err := h.FileSystem.OpenFile(ctx, reqPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return http.StatusConflict, err
+		}
 		return http.StatusNotFound, err
 	}
 	_, copyErr := io.Copy(f, r.Body)
@@ -300,7 +322,7 @@ func (h *Handler) handleMkcol(w http.ResponseWriter, r *http.Request) (status in
 	}
 	defer release()
 
-	ctx := getContext(r)
+	ctx := r.Context()
 
 	if r.ContentLength > 0 {
 		return http.StatusUnsupportedMediaType, nil
@@ -323,7 +345,7 @@ func (h *Handler) handleCopyMove(w http.ResponseWriter, r *http.Request) (status
 	if err != nil {
 		return http.StatusBadRequest, errInvalidDestination
 	}
-	if u.Host != r.Host {
+	if u.Host != "" && u.Host != r.Host {
 		return http.StatusBadGateway, errInvalidDestination
 	}
 
@@ -344,7 +366,7 @@ func (h *Handler) handleCopyMove(w http.ResponseWriter, r *http.Request) (status
 		return http.StatusForbidden, errDestinationEqualsSource
 	}
 
-	ctx := getContext(r)
+	ctx := r.Context()
 
 	if r.Method == "COPY" {
 		// Section 7.5.1 says that a COPY only needs to lock the destination,
@@ -399,7 +421,7 @@ func (h *Handler) handleLock(w http.ResponseWriter, r *http.Request) (retStatus 
 		return status, err
 	}
 
-	ctx := getContext(r)
+	ctx := r.Context()
 	token, ld, now, created := "", LockDetails{}, time.Now(), false
 	if li == (lockInfo{}) {
 		// An empty lockInfo means to refresh the lock.
@@ -511,7 +533,7 @@ func (h *Handler) handlePropfind(w http.ResponseWriter, r *http.Request) (status
 	if err != nil {
 		return status, err
 	}
-	ctx := getContext(r)
+	ctx := r.Context()
 	fi, err := h.FileSystem.Stat(ctx, reqPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -535,13 +557,14 @@ func (h *Handler) handlePropfind(w http.ResponseWriter, r *http.Request) (status
 
 	walkFn := func(reqPath string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			return handlePropfindError(err, info)
 		}
+
 		var pstats []Propstat
 		if pf.Propname != nil {
 			pnames, err := propnames(ctx, h.FileSystem, h.LockSystem, reqPath)
 			if err != nil {
-				return err
+				return handlePropfindError(err, info)
 			}
 			pstat := Propstat{Status: http.StatusOK}
 			for _, xmlname := range pnames {
@@ -554,9 +577,13 @@ func (h *Handler) handlePropfind(w http.ResponseWriter, r *http.Request) (status
 			pstats, err = props(ctx, h.FileSystem, h.LockSystem, reqPath, pf.Prop)
 		}
 		if err != nil {
-			return err
+			return handlePropfindError(err, info)
 		}
-		return mw.write(makePropstatResponse(path.Join(h.Prefix, reqPath), pstats))
+		href := path.Join(h.Prefix, reqPath)
+		if href != "/" && info.IsDir() {
+			href += "/"
+		}
+		return mw.write(makePropstatResponse(href, pstats))
 	}
 
 	walkErr := walkFS(ctx, h.FileSystem, depth, reqPath, fi, walkFn)
@@ -581,7 +608,7 @@ func (h *Handler) handleProppatch(w http.ResponseWriter, r *http.Request) (statu
 	}
 	defer release()
 
-	ctx := getContext(r)
+	ctx := r.Context()
 
 	if _, err := h.FileSystem.Stat(ctx, reqPath); err != nil {
 		if os.IsNotExist(err) {
@@ -629,6 +656,33 @@ func makePropstatResponse(href string, pstats []Propstat) *response {
 	return &resp
 }
 
+func handlePropfindError(err error, info os.FileInfo) error {
+	var skipResp error = nil
+	if info != nil && info.IsDir() {
+		skipResp = filepath.SkipDir
+	}
+
+	if errors.Is(err, os.ErrPermission) {
+		// If the server cannot recurse into a directory because it is not allowed,
+		// then there is nothing more to say about it. Just skip sending anything.
+		return skipResp
+	}
+
+	if _, ok := err.(*os.PathError); ok {
+		// If the file is just bad, it couldn't be a proper WebDAV resource. Skip it.
+		return skipResp
+	}
+
+	// We need to be careful with other errors: there is no way to abort the xml stream
+	// part way through while returning a valid PROPFIND response. Returning only half
+	// the data would be misleading, but so would be returning results tainted by errors.
+	// The current behaviour by returning an error here leads to the stream being aborted,
+	// and the parent http server complaining about writing a spurious header. We should
+	// consider further enhancing this error handling to more gracefully fail, or perhaps
+	// buffer the entire response until we've walked the tree.
+	return err
+}
+
 const (
 	infiniteDepth = -1
 	invalidDepth  = -2
@@ -638,10 +692,11 @@ const (
 // infiniteDepth. Parsing any other string returns invalidDepth.
 //
 // Different WebDAV methods have further constraints on valid depths:
-//	- PROPFIND has no further restrictions, as per section 9.1.
-//	- COPY accepts only "0" or "infinity", as per section 9.8.3.
-//	- MOVE accepts only "infinity", as per section 9.9.2.
-//	- LOCK accepts only "0" or "infinity", as per section 9.10.3.
+//   - PROPFIND has no further restrictions, as per section 9.1.
+//   - COPY accepts only "0" or "infinity", as per section 9.8.3.
+//   - MOVE accepts only "infinity", as per section 9.9.2.
+//   - LOCK accepts only "0" or "infinity", as per section 9.10.3.
+//
 // These constraints are enforced by the handleXxx methods.
 func parseDepth(s string) int {
 	switch s {

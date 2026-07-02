@@ -5,17 +5,17 @@
 package webdav
 
 import (
+	"context"
 	"encoding/xml"
 	"io"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
-
-	"golang.org/x/net/context"
 )
 
 // slashClean is equivalent to but slightly more efficient than
@@ -57,6 +57,9 @@ type File interface {
 
 // A Dir implements FileSystem using the native file system restricted to a
 // specific directory tree.
+//
+// Dir does not prevent traversal of symbolic links within its directory tree,
+// including links that reference locations outside of the tree.
 //
 // While the FileSystem.OpenFile method takes '/'-separated paths, a Dir's
 // string value is a filename on the native file system, not a URL, so it is
@@ -163,6 +166,7 @@ type memFS struct {
 //   - "/", "foo", false
 //   - "/foo/", "bar", false
 //   - "/foo/bar/", "x", true
+//
 // The frag argument will be empty only if dir is the root node and the walk
 // ends at that root node.
 func (fs *memFS) walk(op, fullname string, f func(dir *memFSNode, frag string, final bool) error) error {
@@ -273,8 +277,14 @@ func (fs *memFS) OpenFile(ctx context.Context, name string, flag int, perm os.Fi
 	var n *memFSNode
 	if dir == nil {
 		// We're opening the root.
-		if flag&(os.O_WRONLY|os.O_RDWR) != 0 {
-			return nil, os.ErrPermission
+		if runtime.GOOS == "zos" {
+			if flag&os.O_WRONLY != 0 {
+				return nil, os.ErrPermission
+			}
+		} else {
+			if flag&(os.O_WRONLY|os.O_RDWR) != 0 {
+				return nil, os.ErrPermission
+			}
 		}
 		n, frag = &fs.root, "/"
 
@@ -540,11 +550,11 @@ func (f *memFile) Seek(offset int64, whence int) (int64, error) {
 	npos := f.pos
 	// TODO: How to handle offsets greater than the size of system int?
 	switch whence {
-	case os.SEEK_SET:
+	case io.SeekStart:
 		npos = int(offset)
-	case os.SEEK_CUR:
+	case io.SeekCurrent:
 		npos += int(offset)
-	case os.SEEK_END:
+	case io.SeekEnd:
 		npos = len(f.n.data) + int(offset)
 	default:
 		npos = -1
